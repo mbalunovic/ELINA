@@ -105,7 +105,7 @@ typedef struct neuron_t{
 typedef struct layer_t{
 	size_t dims;
 	layertype_t type;
-        activation_type_t activation;
+    activation_type_t activation;
 	neuron_t **neurons;
 	double * h_t_inf;
 	double * h_t_sup;
@@ -234,7 +234,7 @@ void conv_handle_intermediate_relu_layer(elina_manager_t* man, elina_abstract0_t
 size_t handle_maxpool_layer(elina_manager_t *man, elina_abstract0_t *abs, 
 			   size_t *pool_size, size_t *input_size);
 
-void create_lstm_layer(elina_manager_t *man, elina_abstract0_t *abs, size_t h);
+void create_lstm_layer(elina_manager_t *man, elina_abstract0_t *abs, size_t h, bool alloc);
 
 void handle_lstm_layer(elina_manager_t *man, elina_abstract0_t *abs, double **weights,  double *bias, size_t d, size_t h);
 
@@ -246,6 +246,8 @@ elina_linexpr0_t * get_uexpr_for_output_neuron(elina_manager_t *man, elina_abstr
 
 elina_interval_t * box_for_neuron(elina_manager_t* man, elina_abstract0_t * abs, size_t layerno, size_t neuron_no);
 
+elina_interval_t * box_for_lstm_neuron(elina_manager_t* man, elina_abstract0_t * abs, size_t layerno, size_t neuron_no);
+  
 elina_interval_t ** box_for_layer(elina_manager_t* man, elina_abstract0_t * abs, size_t layerno);
 
 size_t get_num_neurons_in_layer(elina_manager_t* man, elina_abstract0_t * abs, size_t layerno);

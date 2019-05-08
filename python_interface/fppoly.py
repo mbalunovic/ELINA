@@ -127,7 +127,7 @@ def fppoly_set_network_input_box(man, element, intdim, realdim, inf_array, sup_a
         print('Problem with loading/calling "fppoly_set_network_input_box" from "libfppoly.so"')
         print(inst)
 
-return res
+    return res
 
 def fppoly_from_network_input_poly(man, intdim, realdim, inf_array, sup_array, lexpr_weights, lexpr_cst, lexpr_dim,  uexpr_weights, uexpr_cst, uexpr_dim, expr_size):
     """
@@ -253,7 +253,7 @@ def ffn_handle_first_relu_layer_no_alloc(man, element,weights, bias,  size, num_
         print('Problem with loading/calling "ffn_handle_first_relu_layer_no_alloc" from "libfppoly.so"')
         print(inst)
 
-return
+
 
 def ffn_handle_first_sigmoid_layer(man, element,weights, bias,  size, num_pixels):
     """
@@ -322,7 +322,7 @@ def ffn_handle_first_sigmoid_layer_no_alloc(man, element,weights, bias,  size, n
         print('Problem with loading/calling "ffn_handle_first_sigmoid_layer_no_alloc" from "libfppoly.so"')
         print(inst)
 
-return
+
 
 def ffn_handle_first_tanh_layer(man, element,weights, bias,  size, num_pixels):
     """
@@ -391,7 +391,6 @@ def ffn_handle_first_tanh_layer_no_alloc(man, element,weights, bias,  size, num_
         print('Problem with loading/calling "ffn_handle_first_tanh_layer_no_alloc" from "libfppoly.so"')
         print(inst)
 
-return
 
 
 def ffn_handle_first_parabola_layer(man, element,weights, bias,  size, num_pixels):
@@ -461,7 +460,6 @@ def ffn_handle_first_parabola_layer_no_alloc(man, element,weights, bias,  size, 
         print('Problem with loading/calling "ffn_handle_first_parabola_layer_no_alloc" from "libfppoly.so"')
         print(inst)
 
-return
 
 def ffn_handle_first_log_layer(man, element,weights, bias,  size, num_pixels):
     """
@@ -530,7 +528,6 @@ def ffn_handle_first_log_layer_no_alloc(man, element,weights, bias,  size, num_p
         print('Problem with loading/calling "ffn_handle_first_log_layer_no_alloc" from "libfppoly.so"')
         print(inst)
 
-return
 
 def ffn_handle_intermediate_affine_layer(man, element, weights, bias, num_out_neurons, num_in_neurons):
     """
@@ -1465,7 +1462,7 @@ def box_for_neuron(man, element,layerno, neuron_no):
         ElinaIntervalArray representing the hypercube.
 
     """
-
+    
     interval = None
     try:
         box_for_neuron_c = fppoly_api.box_for_neuron
@@ -1477,6 +1474,40 @@ def box_for_neuron(man, element,layerno, neuron_no):
         print('Make sure you are passing ElinaManagerPtr, ElinaAbstract0Ptr, c_size_t, c_size_t to the function')
 
     return interval
+
+def box_for_lstm_neuron(man, element,layerno, neuron_no):
+    """
+    returns bounds for a neuron in an LSTM layer
+    
+    Parameters
+    ----------
+    man : ElinaManagerPtr
+        Pointer to the ElinaManager.
+    element : ElinaAbstract0Ptr
+        Pointer to the ElinaAbstract0.
+    layerno: c_size_t
+        the layer number
+    neuron_no: c_size_t
+        the neuron number in the layer
+    Returns
+    -------
+    interval_array : ElinaIntervalPtr
+        ElinaIntervalArray representing the hypercube.
+
+    """
+    
+    interval = None
+    try:
+        box_for_lstm_neuron_c = fppoly_api.box_for_lstm_neuron
+        box_for_lstm_neuron_c.restype = ElinaIntervalPtr
+        box_for_lstm_neuron_c.argtypes = [ElinaManagerPtr, ElinaAbstract0Ptr, c_size_t, c_size_t]
+        interval = box_for_lstm_neuron_c(man, element,layerno, neuron_no)
+    except:
+        print('Problem with loading/calling "box_for_neuron" from "fppoly.so"')
+        print('Make sure you are passing ElinaManagerPtr, ElinaAbstract0Ptr, c_size_t, c_size_t to the function')
+
+    return interval
+
 
 def box_for_layer(man, element,layerno):
     """
@@ -1677,7 +1708,7 @@ def get_uexpr_for_output_neuron(man,element,i):
     return linexpr0
 
 
-def create_lstm_layer(man, element,h):
+def create_lstm_layer(man, element,h, alloc):
     """
     creates an lstm layer for the neural network, this should be called only once per each lstm layer
 
@@ -1689,7 +1720,8 @@ def create_lstm_layer(man, element,h):
         Pointer to the ElinaAbstract0.
     h: c_size_t
         size of h_t
-
+    alloc: c_bool
+        whether to allocate new lstm layer
     Returns
     --------
     None
@@ -1697,11 +1729,11 @@ def create_lstm_layer(man, element,h):
     try:
         create_lstm_layer_c = fppoly_api.create_lstm_layer
         create_lstm_layer_c.restype = None
-        create_lstm_layer_c.argtypes = [ElinaManagerPtr, ElinaAbstract0Ptr, c_size_t]
-        create_lstm_layer_c(man,element,h)
+        create_lstm_layer_c.argtypes = [ElinaManagerPtr, ElinaAbstract0Ptr, c_size_t, c_bool]
+        create_lstm_layer_c(man,element,h,alloc)
     except:
         print('Problem with loading/calling "create_lstm_layer" from "fppoly.so"')
-        print('Make sure you are passing ElinaManagerPtr, ElinaAbstract0Ptr, c_size_t to the function')
+        print('Make sure you are passing ElinaManagerPtr, ElinaAbstract0Ptr, c_size_t, c_bool to the function')
 
     return
    
