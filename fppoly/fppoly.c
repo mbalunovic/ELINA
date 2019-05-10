@@ -1481,6 +1481,7 @@ expr_t * lexpr_replace_relu_bounds(fppoly_internal_t * pr, expr_t * expr, neuron
 		double width = ub + lb;
 		double lambda_inf = -ub/width;
 		double lambda_sup = ub/width;
+		
 		if((expr->sup_coeff[i]==0) && (expr->inf_coeff[i]==0)){
 			res->inf_coeff[i] = 0.0;
 			res->sup_coeff[i] = 0.0;
@@ -1495,8 +1496,7 @@ expr_t * lexpr_replace_relu_bounds(fppoly_internal_t * pr, expr_t * expr, neuron
 			res->inf_coeff[i] = expr->inf_coeff[i];
 			res->sup_coeff[i] = expr->sup_coeff[i];
 		}
-		else if(expr->sup_coeff[i]<0){
-			
+		else if(expr->sup_coeff[i]<0){	
 			double mu_inf = lambda_inf*neurons[k]->lb;
 			double mu_sup = lambda_sup*neurons[k]->lb;
 			//res->coeff[i] = lambda*expr->coeff[i];
@@ -1507,35 +1507,56 @@ expr_t * lexpr_replace_relu_bounds(fppoly_internal_t * pr, expr_t * expr, neuron
 			res->inf_cst = res->inf_cst + tmp1 + pr->min_denormal;
 			res->sup_cst = res->sup_cst + tmp2 + pr->min_denormal;
 		}
-		else if (expr->inf_coeff[i]<0){
+		else {
+		  res->inf_coeff[i] = 0.0;
+		  res->sup_coeff[i] = 0.0;
+		  double tmp1, tmp2;
+		  elina_double_interval_mul(&tmp1,&tmp2,expr->inf_coeff[i],expr->sup_coeff[i],0,ub);
+		  res->inf_cst = res->inf_cst + tmp1;
+		  res->sup_cst = res->sup_cst + tmp2;
+		}
+		
+		/* else if(expr->sup_coeff[i]<0){ */
 			
-			double area1 = lb*ub;
-			double area2 = 0.5*ub*width;
-			double area3 = 0.5*lb*width;
-			if((area1 < area2) && (area1 < area3)){
-			//if(1){
-				//res->coeff[i] = lambda*expr->coeff[i];
-				elina_double_interval_mul_expr_coeff(pr,&res->inf_coeff[i],&res->sup_coeff[i],lambda_inf,lambda_sup,expr->inf_coeff[i],expr->sup_coeff[i]);
+		/* 	double mu_inf = lambda_inf*neurons[k]->lb; */
+		/* 	double mu_sup = lambda_sup*neurons[k]->lb; */
+		/* 	//res->coeff[i] = lambda*expr->coeff[i]; */
+		/* 	//res->cst = res->cst + expr->coeff[i]*mu; */
+		/* 	elina_double_interval_mul_expr_coeff(pr,&res->inf_coeff[i],&res->sup_coeff[i],lambda_inf,lambda_sup,expr->inf_coeff[i],expr->sup_coeff[i]); */
+		/* 	double tmp1, tmp2; */
+		/* 	elina_double_interval_mul_cst_coeff(pr,&tmp1,&tmp2,mu_inf,mu_sup,expr->inf_coeff[i],expr->sup_coeff[i]); */
+		/* 	res->inf_cst = res->inf_cst + tmp1 + pr->min_denormal; */
+		/* 	res->sup_cst = res->sup_cst + tmp2 + pr->min_denormal; */
+		/* } */
+		/* else if (expr->inf_coeff[i]<0){ */
+			
+		/* 	double area1 = lb*ub; */
+		/* 	double area2 = 0.5*ub*width; */
+		/* 	double area3 = 0.5*lb*width; */
+		/* 	if((area1 < area2) && (area1 < area3)){ */
+		/* 	//if(1){ */
+		/* 		//res->coeff[i] = lambda*expr->coeff[i]; */
+		/* 		elina_double_interval_mul_expr_coeff(pr,&res->inf_coeff[i],&res->sup_coeff[i],lambda_inf,lambda_sup,expr->inf_coeff[i],expr->sup_coeff[i]); */
 				
-			}
-			else if((area2 < area1) && (area2 < area3)){
-				res->inf_coeff[i] = 0.0;
-				res->sup_coeff[i] = 0.0;
-			}
-			else{
-				res->inf_coeff[i] = expr->inf_coeff[i];
-				res->sup_coeff[i] = expr->sup_coeff[i];
-			}
-		}
-		else{
+		/* 	} */
+		/* 	else if((area2 < area1) && (area2 < area3)){ */
+		/* 		res->inf_coeff[i] = 0.0; */
+		/* 		res->sup_coeff[i] = 0.0; */
+		/* 	} */
+		/* 	else{ */
+		/* 		res->inf_coeff[i] = expr->inf_coeff[i]; */
+		/* 		res->sup_coeff[i] = expr->sup_coeff[i]; */
+		/* 	} */
+		/* } */
+		/* else{ */
 			
-			res->inf_coeff[i] = 0.0;
-			res->sup_coeff[i] = 0.0;
-			double tmp1, tmp2;
-			elina_double_interval_mul(&tmp1,&tmp2,expr->inf_coeff[i],expr->sup_coeff[i],0,ub);
-			res->inf_cst = res->inf_cst + tmp1;
-			res->sup_cst = res->sup_cst + tmp2;
-		}
+		/* 	res->inf_coeff[i] = 0.0; */
+		/* 	res->sup_coeff[i] = 0.0; */
+		/* 	double tmp1, tmp2; */
+		/* 	elina_double_interval_mul(&tmp1,&tmp2,expr->inf_coeff[i],expr->sup_coeff[i],0,ub); */
+		/* 	res->inf_cst = res->inf_cst + tmp1; */
+		/* 	res->sup_cst = res->sup_cst + tmp2; */
+		/* } */
 	}
 	if(expr->type==SPARSE){
 		res->dim = (size_t*)malloc(num_neurons*sizeof(size_t));
@@ -1584,7 +1605,6 @@ expr_t * uexpr_replace_relu_bounds(fppoly_internal_t *pr, expr_t * expr, neuron_
 			res->sup_coeff[i] = expr->sup_coeff[i];
 		}
 		else if(expr->inf_coeff[i]<0){
-			
 			double mu_inf = lambda_inf*neurons[k]->lb;
 			double mu_sup = lambda_sup*neurons[k]->lb;
 			//res->coeff[i] = lambda*expr->coeff[i];
@@ -1594,36 +1614,43 @@ expr_t * uexpr_replace_relu_bounds(fppoly_internal_t *pr, expr_t * expr, neuron_
 			elina_double_interval_mul_cst_coeff(pr,&tmp1,&tmp2,mu_inf,mu_sup,expr->inf_coeff[i],expr->sup_coeff[i]);
 			res->inf_cst = res->inf_cst + tmp1 + pr->min_denormal;
 			res->sup_cst = res->sup_cst + tmp2 + pr->min_denormal;
-		}
-		else if(expr->sup_coeff[i]<0){
-			
-			double area1 = lb*ub;
-			double area2 = 0.5*ub*width;
-			double area3 = 0.5*lb*width;
-			if((area1 < area2) && (area1 < area3)){
-			//if(1){
-				//res->coeff[i] = lambda*expr->coeff[i];
-				elina_double_interval_mul_expr_coeff(pr,&res->inf_coeff[i],&res->sup_coeff[i],lambda_inf,lambda_sup,expr->inf_coeff[i],expr->sup_coeff[i]);
-			}
-			else if((area2 < area1) && (area2 < area3)){
-				res->inf_coeff[i] = 0.0;
-				res->sup_coeff[i] = 0.0;
-			}
-			else{
-				res->inf_coeff[i] = expr->inf_coeff[i];
-				res->sup_coeff[i] = expr->sup_coeff[i];
-			}
-			//
-		}
-		else{
-			
-			res->inf_coeff[i] = 0.0;
-			res->sup_coeff[i] = 0.0;
-			double tmp1, tmp2;
+		} else {
+		    res->inf_coeff[i] = 0.0;
+    	    res->sup_coeff[i] = 0.0;
+		    double tmp1, tmp2;
 			elina_double_interval_mul(&tmp1,&tmp2,expr->inf_coeff[i],expr->sup_coeff[i],0,ub);
 			res->inf_cst = res->inf_cst + tmp1;
-			res->sup_cst = res->sup_cst + tmp2;			
+			res->sup_cst = res->sup_cst + tmp2;
 		}
+		/* else if(expr->sup_coeff[i]<0){ */
+			
+		/* 	double area1 = lb*ub; */
+		/* 	double area2 = 0.5*ub*width; */
+		/* 	double area3 = 0.5*lb*width; */
+		/* 	if((area1 < area2) && (area1 < area3)){ */
+		/* 	//if(1){ */
+		/* 		//res->coeff[i] = lambda*expr->coeff[i]; */
+		/* 		elina_double_interval_mul_expr_coeff(pr,&res->inf_coeff[i],&res->sup_coeff[i],lambda_inf,lambda_sup,expr->inf_coeff[i],expr->sup_coeff[i]); */
+		/* 	} */
+		/* 	else if((area2 < area1) && (area2 < area3)){ */
+		/* 		res->inf_coeff[i] = 0.0; */
+		/* 		res->sup_coeff[i] = 0.0; */
+		/* 	} */
+		/* 	else{ */
+		/* 		res->inf_coeff[i] = expr->inf_coeff[i]; */
+		/* 		res->sup_coeff[i] = expr->sup_coeff[i]; */
+		/* 	} */
+		/* 	// */
+		/* } */
+		/* else{ */
+			
+		/* 	res->inf_coeff[i] = 0.0; */
+		/* 	res->sup_coeff[i] = 0.0; */
+		/* 	double tmp1, tmp2; */
+		/* 	elina_double_interval_mul(&tmp1,&tmp2,expr->inf_coeff[i],expr->sup_coeff[i],0,ub); */
+		/* 	res->inf_cst = res->inf_cst + tmp1; */
+		/* 	res->sup_cst = res->sup_cst + tmp2;			 */
+		/* } */
 		
 	}
 	if(expr->type==SPARSE){

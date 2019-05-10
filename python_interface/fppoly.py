@@ -127,7 +127,7 @@ def fppoly_set_network_input_box(man, element, intdim, realdim, inf_array, sup_a
         print('Problem with loading/calling "fppoly_set_network_input_box" from "libfppoly.so"')
         print(inst)
 
-return res
+    return res
 
 def fppoly_from_network_input_poly(man, intdim, realdim, inf_array, sup_array, lexpr_weights, lexpr_cst, lexpr_dim,  uexpr_weights, uexpr_cst, uexpr_dim, expr_size):
     """
@@ -253,7 +253,7 @@ def ffn_handle_first_relu_layer_no_alloc(man, element,weights, bias,  size, num_
         print('Problem with loading/calling "ffn_handle_first_relu_layer_no_alloc" from "libfppoly.so"')
         print(inst)
 
-return
+    return
 
 def ffn_handle_first_sigmoid_layer(man, element,weights, bias,  size, num_pixels):
     """
@@ -322,7 +322,7 @@ def ffn_handle_first_sigmoid_layer_no_alloc(man, element,weights, bias,  size, n
         print('Problem with loading/calling "ffn_handle_first_sigmoid_layer_no_alloc" from "libfppoly.so"')
         print(inst)
 
-return
+    return
 
 def ffn_handle_first_tanh_layer(man, element,weights, bias,  size, num_pixels):
     """
@@ -391,7 +391,7 @@ def ffn_handle_first_tanh_layer_no_alloc(man, element,weights, bias,  size, num_
         print('Problem with loading/calling "ffn_handle_first_tanh_layer_no_alloc" from "libfppoly.so"')
         print(inst)
 
-return
+    return
 
 
 def ffn_handle_first_parabola_layer(man, element,weights, bias,  size, num_pixels):
@@ -461,7 +461,7 @@ def ffn_handle_first_parabola_layer_no_alloc(man, element,weights, bias,  size, 
         print('Problem with loading/calling "ffn_handle_first_parabola_layer_no_alloc" from "libfppoly.so"')
         print(inst)
 
-return
+    return
 
 def ffn_handle_first_log_layer(man, element,weights, bias,  size, num_pixels):
     """
@@ -530,7 +530,7 @@ def ffn_handle_first_log_layer_no_alloc(man, element,weights, bias,  size, num_p
         print('Problem with loading/calling "ffn_handle_first_log_layer_no_alloc" from "libfppoly.so"')
         print(inst)
 
-return
+        return
 
 def ffn_handle_intermediate_affine_layer(man, element, weights, bias, num_out_neurons, num_in_neurons):
     """
