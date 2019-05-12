@@ -765,7 +765,7 @@ expr_t * replace_input_poly_cons_in_lexpr(fppoly_internal_t *pr, expr_t * expr, 
 		k = expr->dim[0];		
 	}
 	expr_t * mul_expr = NULL;
-			
+
 	if(expr->sup_coeff[0] <0){
 		mul_expr = fp->input_uexpr[k];
 	}
@@ -913,8 +913,8 @@ double compute_lb_from_expr(fppoly_internal_t *pr, expr_t * expr, fppoly_t * fp)
 	if((fp->input_lexpr!=NULL) && (fp->input_uexpr!=NULL)){
 		expr =  replace_input_poly_cons_in_lexpr(pr, expr, fp);
 	}
-        //expr_print(expr);
-	//fflush(stdout);
+	/* expr_print(expr); */
+	/* fflush(stdout); */
 	size_t dims = expr->size;
 	double res_inf = expr->inf_cst;
 	if(expr->inf_coeff==NULL || expr->sup_coeff==NULL){
@@ -928,7 +928,6 @@ double compute_lb_from_expr(fppoly_internal_t *pr, expr_t * expr, fppoly_t * fp)
 		else{
 			k = expr->dim[i];
 		}
-			
 			elina_double_interval_mul(&tmp1,&tmp2,expr->inf_coeff[i],expr->sup_coeff[i],fp->input_inf[k],fp->input_sup[k]);
 			//printf("tmp1: %g\n",tmp1);
 			res_inf = res_inf + tmp1;
@@ -1123,7 +1122,7 @@ expr_t * lexpr_replace_parabola_bounds(fppoly_internal_t * pr, expr_t * expr, ne
 		else if (expr->inf_coeff[i]<0){
 			res->inf_coeff[i] = 0;
 			res->sup_coeff[i] = 0;
-			double u_plus_l_sq_inf, u_plus_l_sq_sup; 
+			double u_plus_l_sq_inf, u_plus_l_sq_sup;
 			elina_double_interval_mul_cst_coeff(pr,&u_plus_l_sq_inf,&u_plus_l_sq_sup,u_plus_l_inf/2,u_plus_l_sup/2,u_plus_l_inf/2,u_plus_l_sup/2);
 			elina_double_interval_mul_expr_coeff(pr,&res->inf_coeff[i],&res->sup_coeff[i],u_plus_l_inf,u_plus_l_sup,expr->inf_coeff[i],expr->sup_coeff[i]);
 			double tmp1, tmp2;
@@ -1201,7 +1200,7 @@ expr_t * uexpr_replace_parabola_bounds(fppoly_internal_t *pr, expr_t * expr, neu
 		else if (expr->sup_coeff[i]<0){
 		    res->inf_coeff[i] = 0;
 			res->sup_coeff[i] = 0;
-			double u_plus_l_sq_inf, u_plus_l_sq_sup; 
+			double u_plus_l_sq_inf, u_plus_l_sq_sup;
 			elina_double_interval_mul_cst_coeff(pr,&u_plus_l_sq_inf,&u_plus_l_sq_sup,u_plus_l_inf/2,u_plus_l_sup/2,u_plus_l_inf/2,u_plus_l_sup/2);
 			elina_double_interval_mul_expr_coeff(pr,&res->inf_coeff[i],&res->sup_coeff[i],u_plus_l_inf,u_plus_l_sup,expr->inf_coeff[i],expr->sup_coeff[i]);
 			double tmp1, tmp2;
@@ -1385,7 +1384,7 @@ expr_t * uexpr_replace_log_bounds(fppoly_internal_t *pr, expr_t * expr, neuron_t
 		double u_plus_l_sup = -u_plus_l_inf;
 
 		if (-lb < 0) {
-		  printf("LOG input may be negative!!!!\n");
+		  printf("LOG input may be negative, got lb = %.10lf, ub = %.10lf!!!!\n", lb, ub);
 		}
 		
 		//= (u_plus_l)*(u_plus_l)
@@ -1513,8 +1512,7 @@ expr_t * lexpr_replace_relu_bounds(fppoly_internal_t * pr, expr_t * expr, neuron
 		else if(neuron_k->lb<0){
 			res->inf_coeff[i] = expr->inf_coeff[i];
 			res->sup_coeff[i] = expr->sup_coeff[i];
-		}
-		else if(expr->sup_coeff[i]<0){
+		} else if(expr->sup_coeff[i]<0){
 			
 			double mu_inf = lambda_inf*neurons[k]->lb;
 			double mu_sup = lambda_sup*neurons[k]->lb;
@@ -1601,8 +1599,7 @@ expr_t * uexpr_replace_relu_bounds(fppoly_internal_t *pr, expr_t * expr, neuron_
 		else if(neuron_k->lb<0){
 			res->inf_coeff[i] = expr->inf_coeff[i];
 			res->sup_coeff[i] = expr->sup_coeff[i];
-		}
-		else if(expr->inf_coeff[i]<0){
+		} else if(expr->inf_coeff[i]<0){
 			
 			double mu_inf = lambda_inf*neurons[k]->lb;
 			double mu_sup = lambda_sup*neurons[k]->lb;
@@ -1641,7 +1638,7 @@ expr_t * uexpr_replace_relu_bounds(fppoly_internal_t *pr, expr_t * expr, neuron_
 			double tmp1, tmp2;
 			elina_double_interval_mul(&tmp1,&tmp2,expr->inf_coeff[i],expr->sup_coeff[i],0,ub);
 			res->inf_cst = res->inf_cst + tmp1;
-			res->sup_cst = res->sup_cst + tmp2;			
+			res->sup_cst = res->sup_cst + tmp2;
 		}
 		
 	}
@@ -1661,8 +1658,8 @@ void compute_chord_slope(double *slope_inf, double *slope_sup, double f_sup_l, d
 
 	double den_l = sup_l + inf_u; 
 	double den_u = sup_u + inf_l;
-	
-    	elina_double_interval_div(slope_inf, slope_sup, num_l, num_u, den_l, den_u);
+
+	elina_double_interval_div(slope_inf, slope_sup, num_l, num_u, den_l, den_u);
 }
 
 void compute_derivative(double *slope_inf, double *slope_sup, double s_curve_l, double s_curve_u, double sq_l, double sq_u, bool is_sigmoid){
@@ -1682,188 +1679,184 @@ void compute_slope_and_intercept_s_curve_lexpr(fppoly_internal_t * pr, double * 
 						double *intercept_inf, double *intercept_sup, double inf_coeff, 
 						double sup_coeff, double lb, double ub, bool is_sigmoid, bool *boxify){
 	
-	fesetround(FE_DOWNWARD);
-	double e_sup_l = is_sigmoid ? -exp(ub) : -tanh(ub);
-	double e_inf_l = is_sigmoid ? -exp(-lb) : -tanh(-lb);
-	fesetround(FE_UPWARD); 
-	double e_sup_u = is_sigmoid ? exp(ub) : tanh(ub);
-	double e_inf_u = is_sigmoid ? exp(-lb) : tanh(-lb);
-	double f_sup_l, f_sup_u;
-	double f_inf_l, f_inf_u;
-	double den_sup_l, den_sup_u;
-	double den_inf_l, den_inf_u;
-	if(is_sigmoid){
-		den_sup_l = -1 + e_sup_l;
-		den_sup_u = 1 + e_sup_u;				
-		den_inf_l = -1 + e_inf_l;
-		den_inf_u = 1 + e_inf_u;		
-		elina_double_interval_div(&f_sup_l, &f_sup_u, e_sup_l, e_sup_u, den_sup_l, den_sup_u);
-		elina_double_interval_div(&f_inf_l, &f_inf_u, e_inf_l, e_inf_u, den_inf_l, den_inf_u);
+  fesetround(FE_DOWNWARD);
+  double e_sup_l = is_sigmoid ? -exp(ub) : -tanh(ub);
+  double e_inf_l = is_sigmoid ? -exp(-lb) : -tanh(-lb);
+  fesetround(FE_UPWARD); 
+  double e_sup_u = is_sigmoid ? exp(ub) : tanh(ub);
+  double e_inf_u = is_sigmoid ? exp(-lb) : tanh(-lb);
+  double f_sup_l, f_sup_u;
+  double f_inf_l, f_inf_u;
+  double den_sup_l, den_sup_u;
+  double den_inf_l, den_inf_u;
+  if(is_sigmoid){
+	den_sup_l = -1 + e_sup_l;
+	den_sup_u = 1 + e_sup_u;				
+	den_inf_l = -1 + e_inf_l;
+	den_inf_u = 1 + e_inf_u;		
+	elina_double_interval_div(&f_sup_l, &f_sup_u, e_sup_l, e_sup_u, den_sup_l, den_sup_u);
+	elina_double_interval_div(&f_inf_l, &f_inf_u, e_inf_l, e_inf_u, den_inf_l, den_inf_u);
+  }
+  else{
+	f_inf_l = e_inf_l;
+	f_inf_u = e_inf_u;
+	f_sup_l = e_sup_l;
+	f_sup_u = e_sup_u;
+	den_inf_l = e_inf_l;
+	den_inf_u = e_inf_u;
+	den_sup_l = e_sup_l;
+	den_sup_u = e_sup_u;
+  }
+  
+  if((-lb==ub)|| (-f_inf_l==f_sup_u)){
+	*slope_inf = 0.0;
+	*slope_sup = 0.0;	
+	//
+	double tmp1, tmp2;
+	elina_double_interval_mul(&tmp1,&tmp2,inf_coeff,sup_coeff,f_inf_l,f_sup_u);
+	*intercept_inf = tmp1;
+	*intercept_sup = tmp2;
+	*boxify = true;	
+  }
+  else if(sup_coeff < 0 || inf_coeff < 0){
+	double add_inf, add_sup;
+	double mul_inf, mul_sup;
+	double x_l, x_u;
+	double f_x_l, f_x_u;
+	if(sup_coeff < 0){
+	  if(ub<0){
+		compute_chord_slope(slope_inf, slope_sup, f_sup_l, f_sup_u, f_inf_l, f_inf_u, lb, -lb, -ub, ub);		
+		x_l = ub;
+		x_u = -ub;
+		f_x_l = f_sup_l;
+		f_x_u = f_sup_u;
+		
+		elina_double_interval_mul_cst_coeff(pr,&add_inf,&add_sup,x_l, x_u, *slope_inf,*slope_sup);
+		elina_double_interval_add_cst_coeff(pr,intercept_inf,intercept_sup,f_x_l, f_x_u, add_inf, add_sup);
+		double tmp1, tmp2, tmp3, tmp4;
+		elina_double_interval_mul_cst_coeff(pr,&tmp1,&tmp2,lb, -lb, *slope_inf,*slope_sup);
+		elina_double_interval_add_cst_coeff(pr,&tmp3,&tmp4,*intercept_inf, *intercept_sup, tmp1, tmp2);
+		if(tmp4<f_inf_u){
+		  *boxify = true;
+		}
+	  }
+	  else if(lb<=0){
+		compute_derivative(slope_inf, slope_sup, e_sup_l, e_sup_u, den_sup_l, den_sup_u, is_sigmoid);
+		x_l = ub;
+		x_u = -ub;
+		f_x_l = f_sup_l;
+		f_x_u = f_sup_u;
+		elina_double_interval_mul_cst_coeff(pr,&add_inf,&add_sup,x_l, x_u, *slope_inf,*slope_sup);
+		elina_double_interval_add_cst_coeff(pr,intercept_inf,intercept_sup,f_x_l, f_x_u, add_inf, add_sup);
+		double tmp1, tmp2, tmp3, tmp4;
+		elina_double_interval_mul_cst_coeff(pr,&tmp1,&tmp2,lb, -lb, *slope_inf,*slope_sup);
+		elina_double_interval_add_cst_coeff(pr,&tmp3,&tmp4,*intercept_inf, *intercept_sup, tmp1, tmp2);
+		if(-tmp3<f_inf_u){
+		  
+		  *boxify = true;
+		}
+	  }
+	  else{
+		if(lb<=ub){
+		  //double slope_inf1, slope_sup1;
+		  //double slope_inf2, slope_sup2;
+		  compute_derivative(slope_inf, slope_sup, e_sup_l, e_sup_u, den_sup_l, den_sup_u, is_sigmoid);
+          
+		}
+		else{
+		  compute_derivative(slope_inf, slope_sup, e_inf_l, e_inf_u, den_inf_l, den_inf_u, is_sigmoid);
+		}
+		x_l = ub;
+		x_u = -ub;
+		f_x_l = f_sup_l;
+		f_x_u = f_sup_u;
+		elina_double_interval_mul_cst_coeff(pr,&add_inf,&add_sup,x_l, x_u, *slope_inf,*slope_sup);
+		elina_double_interval_add_cst_coeff(pr,intercept_inf, intercept_sup,f_x_l, f_x_u, add_inf, add_sup);
+		double tmp1, tmp2, tmp3, tmp4;
+		elina_double_interval_mul_cst_coeff(pr,&tmp1,&tmp2,lb, -lb, *slope_inf,*slope_sup);
+		elina_double_interval_add_cst_coeff(pr,&tmp3,&tmp4,*intercept_inf, *intercept_sup, tmp1, tmp2);
+		if(-tmp3<f_inf_u){      
+		  *boxify = true;
+		}
+	  }
 	}
 	else{
-		f_inf_l = e_inf_l;
-		f_inf_u = e_inf_u;
-		f_sup_l = e_sup_l;
-		f_sup_u = e_sup_u;
-		den_inf_l = e_inf_l;
-		den_inf_u = e_inf_u;
-		den_sup_l = e_sup_l;
-		den_sup_u = e_sup_u;
-	}
-
-	if((-lb==ub)|| (-f_inf_l==f_sup_u)){
-		*slope_inf = 0.0;
-		*slope_sup = 0.0;	
-		    //
-		 double tmp1, tmp2;
-		 elina_double_interval_mul(&tmp1,&tmp2,inf_coeff,sup_coeff,f_inf_l,f_sup_u);
-		*intercept_inf = tmp1;
-		*intercept_sup = tmp2;
-		*boxify = true;	
-	}
-	else if(sup_coeff < 0 || inf_coeff < 0){
-		double add_inf, add_sup;
-            	double mul_inf, mul_sup;
-            	double x_l, x_u;
-            	double f_x_l, f_x_u;
-            	if(sup_coeff < 0){
-                	if(ub<0){
-		           	compute_chord_slope(slope_inf, slope_sup, f_sup_l, f_sup_u, f_inf_l, f_inf_u, lb, -lb, -ub, ub);		
-				x_l = ub;
-				x_u = -ub;
-				f_x_l = f_sup_l;
-				f_x_u = f_sup_u;
-				   
-				elina_double_interval_mul_cst_coeff(pr,&add_inf,&add_sup,x_l, x_u, *slope_inf,*slope_sup);
-				elina_double_interval_add_cst_coeff(pr,intercept_inf,intercept_sup,f_x_l, f_x_u, add_inf, add_sup);
-				    double tmp1, tmp2, tmp3, tmp4;
-		           	    elina_double_interval_mul_cst_coeff(pr,&tmp1,&tmp2,lb, -lb, *slope_inf,*slope_sup);
-				    elina_double_interval_add_cst_coeff(pr,&tmp3,&tmp4,*intercept_inf, *intercept_sup, tmp1, tmp2);
-				    if(tmp4<f_inf_u){
-					
-                        		*boxify = true;
-                    		    }
-               	     
-                	}
-                	else if(lb<=0){
-			
-                    		compute_derivative(slope_inf, slope_sup, e_sup_l, e_sup_u, den_sup_l, den_sup_u, is_sigmoid);
-                   		x_l = ub;
-                    		x_u = -ub;
-                    		f_x_l = f_sup_l;
-                    		f_x_u = f_sup_u;
-                    		elina_double_interval_mul_cst_coeff(pr,&add_inf,&add_sup,x_l, x_u, *slope_inf,*slope_sup);
-                    		elina_double_interval_add_cst_coeff(pr,intercept_inf,intercept_sup,f_x_l, f_x_u, add_inf, add_sup);
-		    		double tmp1, tmp2, tmp3, tmp4;
-                    		elina_double_interval_mul_cst_coeff(pr,&tmp1,&tmp2,lb, -lb, *slope_inf,*slope_sup);
-                    		elina_double_interval_add_cst_coeff(pr,&tmp3,&tmp4,*intercept_inf, *intercept_sup, tmp1, tmp2);
-		    		if(-tmp3<f_inf_u){
-                        
-                        		*boxify = true;
-                    		}
-                	}
-                	else{
-			
-                    		if(lb<=ub){
-                    			//double slope_inf1, slope_sup1;
-                    			//double slope_inf2, slope_sup2;
-                        		compute_derivative(slope_inf, slope_sup, e_sup_l, e_sup_u, den_sup_l, den_sup_u, is_sigmoid);
-                        
-                    		}
-                   		 else{
-                        		compute_derivative(slope_inf, slope_sup, e_inf_l, e_inf_u, den_inf_l, den_inf_u, is_sigmoid);
-                    		}
-				x_l = ub;
-				x_u = -ub;
-				f_x_l = f_sup_l;
-				f_x_u = f_sup_u;
-				elina_double_interval_mul_cst_coeff(pr,&add_inf,&add_sup,x_l, x_u, *slope_inf,*slope_sup);
-				elina_double_interval_add_cst_coeff(pr,intercept_inf, intercept_sup,f_x_l, f_x_u, add_inf, add_sup);
-				double tmp1, tmp2, tmp3, tmp4;
-				elina_double_interval_mul_cst_coeff(pr,&tmp1,&tmp2,lb, -lb, *slope_inf,*slope_sup);
-				elina_double_interval_add_cst_coeff(pr,&tmp3,&tmp4,*intercept_inf, *intercept_sup, tmp1, tmp2);
-				if(-tmp3<f_inf_u){      
-				        *boxify = true;
-				}
-                	}
-            	}
-		else{
-               	     if(ub < 0){
-		            compute_derivative( slope_inf, slope_sup, e_inf_l, e_inf_u, den_inf_l, den_inf_u, is_sigmoid);
-		            x_l = -lb;
-		            x_u = lb;
-		            f_x_l = f_inf_l;
-		            f_x_u = f_inf_u;
-		            elina_double_interval_mul_cst_coeff(pr,&add_inf,&add_sup,x_l, x_u, *slope_inf,*slope_sup);
-		            elina_double_interval_add_cst_coeff(pr, intercept_inf, intercept_sup,f_x_l, f_x_u, add_inf, add_sup);
-			    double tmp1, tmp2, tmp3, tmp4;
-		            elina_double_interval_mul_cst_coeff(pr,&tmp1,&tmp2,-ub, ub, *slope_inf,*slope_sup);
-		            elina_double_interval_add_cst_coeff(pr,&tmp3,&tmp4,*intercept_inf, *intercept_sup, tmp1, tmp2);
-		            if(tmp4>-f_sup_l){
-		                *boxify = true;
-		            }	
-               	     }
-		     else if(lb<=0){
-		            compute_chord_slope(slope_inf, slope_sup, f_sup_l, f_sup_u, f_inf_l, f_inf_u, lb, -lb, -ub, ub);
+	  if(ub < 0){
+		compute_derivative( slope_inf, slope_sup, e_inf_l, e_inf_u, den_inf_l, den_inf_u, is_sigmoid);
+		x_l = -lb;
+		x_u = lb;
+		f_x_l = f_inf_l;
+		f_x_u = f_inf_u;
+		elina_double_interval_mul_cst_coeff(pr,&add_inf,&add_sup,x_l, x_u, *slope_inf,*slope_sup);
+		elina_double_interval_add_cst_coeff(pr, intercept_inf, intercept_sup,f_x_l, f_x_u, add_inf, add_sup);
+		double tmp1, tmp2, tmp3, tmp4;
+		elina_double_interval_mul_cst_coeff(pr,&tmp1,&tmp2,-ub, ub, *slope_inf,*slope_sup);
+		elina_double_interval_add_cst_coeff(pr,&tmp3,&tmp4,*intercept_inf, *intercept_sup, tmp1, tmp2);
+		if(tmp4>-f_sup_l){
+		  *boxify = true;
+		}	
+	  }
+	  else if(lb<=0){
+		compute_chord_slope(slope_inf, slope_sup, f_sup_l, f_sup_u, f_inf_l, f_inf_u, lb, -lb, -ub, ub);
 			    
-			    x_l = -lb;
-			    x_u = lb;
-			    f_x_l = f_inf_l;
-			    f_x_u = f_inf_u;
-			    elina_double_interval_mul(&add_inf,&add_sup,x_l, x_u, *slope_inf,*slope_sup);
-		            elina_double_interval_add_cst_coeff(pr,intercept_inf, intercept_sup,f_x_l, f_x_u, add_inf, add_sup);
-			    double tmp1, tmp2, tmp3, tmp4;
-		            elina_double_interval_mul_cst_coeff(pr,&tmp1,&tmp2,-ub, ub, *slope_inf,*slope_sup);
-		            elina_double_interval_add_cst_coeff(pr,&tmp3,&tmp4, *intercept_inf, *intercept_sup, tmp1, tmp2);
+		x_l = -lb;
+		x_u = lb;
+		f_x_l = f_inf_l;
+		f_x_u = f_inf_u;
+		elina_double_interval_mul(&add_inf,&add_sup,x_l, x_u, *slope_inf,*slope_sup);
+		elina_double_interval_add_cst_coeff(pr,intercept_inf, intercept_sup,f_x_l, f_x_u, add_inf, add_sup);
+		double tmp1, tmp2, tmp3, tmp4;
+		elina_double_interval_mul_cst_coeff(pr,&tmp1,&tmp2,-ub, ub, *slope_inf,*slope_sup);
+		elina_double_interval_add_cst_coeff(pr,&tmp3,&tmp4, *intercept_inf, *intercept_sup, tmp1, tmp2);
 				
-			    if(-tmp3>f_sup_u){	
-		                *boxify = true;
-		            }
-		     }
-		     else{
-		            if(lb<=ub){
-		                compute_derivative( slope_inf, slope_sup, e_sup_l, e_sup_u, den_sup_l, den_sup_u, is_sigmoid);
-		            }
-		            else{
-		                compute_derivative( slope_inf, slope_sup, e_inf_l, e_inf_u, den_inf_l, den_inf_u, is_sigmoid);
-		            }
-		            x_l = -lb;
-		            x_u = lb;
-		            f_x_l = f_inf_l;
-		            f_x_u = f_inf_u;
-		            elina_double_interval_mul_cst_coeff(pr,&add_inf,&add_sup,x_l, x_u, *slope_inf,*slope_sup);
-		            elina_double_interval_add_cst_coeff(pr,intercept_inf, intercept_sup,f_x_l, f_x_u, add_inf, add_sup);
-		            double tmp1, tmp2, tmp3, tmp4;
-		            elina_double_interval_mul_cst_coeff(pr,&tmp1,&tmp2,-ub, ub, *slope_inf,*slope_sup);
-		            elina_double_interval_add_cst_coeff(pr,&tmp3,&tmp4, *intercept_inf, *intercept_sup, tmp1, tmp2);
-		            if(tmp4>-f_sup_l){
-		               
-		                *boxify = true;
-		            }
-		        }        
+		if(-tmp3>f_sup_u){	
+		  *boxify = true;
 		}
-		if(*boxify){
-		        *slope_inf = 0.0;
-			*slope_sup = 0.0;	
-		        double tmp1, tmp2;
-		        elina_double_interval_mul(&tmp1,&tmp2,inf_coeff, sup_coeff,f_inf_l,f_sup_u);
-		       *intercept_inf = tmp1;
-		       *intercept_sup = tmp2;
-			
-		}			
+	  }
+	  else{
+		if(lb<=ub){
+		  compute_derivative( slope_inf, slope_sup, e_sup_l, e_sup_u, den_sup_l, den_sup_u, is_sigmoid);
+		}
+		else{
+		  compute_derivative( slope_inf, slope_sup, e_inf_l, e_inf_u, den_inf_l, den_inf_u, is_sigmoid);
+		}
+		x_l = -lb;
+		x_u = lb;
+		f_x_l = f_inf_l;
+		f_x_u = f_inf_u;
+		elina_double_interval_mul_cst_coeff(pr,&add_inf,&add_sup,x_l, x_u, *slope_inf,*slope_sup);
+		elina_double_interval_add_cst_coeff(pr,intercept_inf, intercept_sup,f_x_l, f_x_u, add_inf, add_sup);
+		double tmp1, tmp2, tmp3, tmp4;
+		elina_double_interval_mul_cst_coeff(pr,&tmp1,&tmp2,-ub, ub, *slope_inf,*slope_sup);
+		elina_double_interval_add_cst_coeff(pr,&tmp3,&tmp4, *intercept_inf, *intercept_sup, tmp1, tmp2);
+		if(tmp4>-f_sup_l){
+		               
+		  *boxify = true;
+		}
+	  }        
 	}
-        else{
+	if(*boxify){
+	  *slope_inf = 0.0;
+	  *slope_sup = 0.0;	
+	  double tmp1, tmp2;
+	  elina_double_interval_mul(&tmp1,&tmp2,inf_coeff, sup_coeff,f_inf_l,f_sup_u);
+	  *intercept_inf = tmp1;
+	  *intercept_sup = tmp2;
 			
-		*slope_inf = 0.0;
-		*slope_sup = 0.0;
-		double tmp1, tmp2;
-		elina_double_interval_mul(&tmp1,&tmp2,inf_coeff,sup_coeff,f_inf_l,f_sup_u);
-		*intercept_inf = tmp1;
-		*intercept_sup = tmp2;
-		*boxify = true;
-       }
+	}			
+  }
+  else{
+			
+	*slope_inf = 0.0;
+	*slope_sup = 0.0;
+	double tmp1, tmp2;
+	elina_double_interval_mul(&tmp1,&tmp2,inf_coeff,sup_coeff,f_inf_l,f_sup_u);
+	*intercept_inf = tmp1;
+	*intercept_sup = tmp2;
+	*boxify = true;
+  }
 		
-	return;
+  return;
 }
 
 void compute_slope_and_intercept_s_curve_uexpr(fppoly_internal_t * pr, double * slope_inf, double *slope_sup, 
@@ -1902,7 +1895,7 @@ void compute_slope_and_intercept_s_curve_uexpr(fppoly_internal_t * pr, double * 
             den_sup_u = e_sup_u;
         }
         
-        if((-lb==ub) || (-f_inf_l==f_sup_u)){
+        if((ub + lb < 0.01) || (-f_inf_l==f_sup_u)){
 	    *slope_inf = 0.0;
 	    *slope_sup = 0.0;
 	    *boxify = true;
@@ -2883,12 +2876,19 @@ double apply_s_curve_lexpr(fppoly_internal_t *pr, expr_t **lexpr_p, neuron_t * n
 	double lb = neuron->lb;
 	double ub = neuron->ub;
 	bool boxify = false;
+	if (ub + lb < 0.1) {
+	  boxify = true;
+	}
 	double slope_inf, slope_sup;
 
 	double intercept_inf, intercept_sup;
 	compute_slope_and_intercept_s_curve_lexpr(pr, &slope_inf, &slope_sup, 
 						&intercept_inf, &intercept_sup, -1, 
 						1, lb, ub, is_sigmoid, &boxify);
+	/* printf("before: "); */
+	/* expr_print(lexpr); */
+	/* printf("[l] slope_inf = %.10lf, intercept_inf = %.10lf\n", slope_inf, intercept_inf); */
+	/* printf("[l] slope_sup = %.10lf, intercept_sup = %.10lf\n", slope_sup, intercept_sup); */
 
 	fesetround(FE_DOWNWARD);
 	double e_inf_l = is_sigmoid ? -exp(-lb) : -tanh(-lb);
@@ -2906,13 +2906,6 @@ double apply_s_curve_lexpr(fppoly_internal_t *pr, expr_t **lexpr_p, neuron_t * n
 		f_inf_u = e_inf_u;
 	}
 	boxify = true;
-	/* if (ub + lb < 10) { */
-	/*   boxify = true; */
-	/* } */
-	/* if (ub > 0) { */
-	/*   boxify = true;  */
-	/* } */
-	
 	if(boxify){
 		for(i=0; i< size; i++){
 			lexpr->inf_coeff[i] = 0.0;
@@ -2928,6 +2921,8 @@ double apply_s_curve_lexpr(fppoly_internal_t *pr, expr_t **lexpr_p, neuron_t * n
 		elina_double_interval_mul_cst_coeff(pr, &lexpr->inf_cst, &lexpr->sup_cst, slope_inf, slope_sup, lexpr->inf_cst, lexpr->sup_cst );
 		elina_double_interval_add_cst_coeff(pr,&lexpr->inf_cst,&lexpr->sup_cst,intercept_inf, intercept_sup, lexpr->inf_cst, lexpr->sup_cst);
 	}
+	/* printf("after:\n"); */
+	/* expr_print(lexpr); */
 	return f_inf_l;
 }
 
@@ -2938,11 +2933,16 @@ double apply_s_curve_uexpr(fppoly_internal_t *pr, expr_t **uexpr_p, neuron_t * n
 	double lb = neuron->lb;
 	double ub = neuron->ub;
 	bool boxify = false;
+	if (ub + lb < 0.1) {
+	  boxify = true;
+	}
 	double slope_inf, slope_sup;
 	double intercept_inf, intercept_sup;
 	compute_slope_and_intercept_s_curve_uexpr(pr, &slope_inf, &slope_sup, 
 						&intercept_inf, &intercept_sup, -1, 
 						1, lb, ub, is_sigmoid, &boxify);
+	/* printf("[u] slope_inf = %.10lf, intercept_inf = %.10lf\n", slope_inf, intercept_inf); */
+	/* printf("[u] slope_sup = %.10lf, intercept_sup = %.10lf\n", slope_sup, intercept_sup); */
 
 	fesetround(FE_DOWNWARD);
 	double e_sup_l = is_sigmoid ? -exp(ub) : -tanh(ub);
@@ -2960,13 +2960,6 @@ double apply_s_curve_uexpr(fppoly_internal_t *pr, expr_t **uexpr_p, neuron_t * n
 		f_sup_u = e_sup_u;
 	}
 	boxify = true;
-	/* printf("%d ... %lf %lf ---> %lf %lf\n",is_sigmoid,lb,ub,f_sup_l,f_sup_u); */
-	/* printf("slope_sup = %lf, intercept_sup = %lf\n",slope_sup, intercept_sup); */
-	/* boxify = true; */
-	/* if (ub > 0 || ub + lb < 1e-1) { */
-	/*   boxify = true; */
-	/* } */
-
 	if(boxify){
 		for(i=0; i< size; i++){
 			uexpr->inf_coeff[i] = 0.0;
@@ -2982,6 +2975,9 @@ double apply_s_curve_uexpr(fppoly_internal_t *pr, expr_t **uexpr_p, neuron_t * n
 	  elina_double_interval_mul_cst_coeff(pr, &uexpr->inf_cst, &uexpr->sup_cst, slope_inf, slope_sup, uexpr->inf_cst, uexpr->sup_cst );
 	  elina_double_interval_add_cst_coeff(pr,&uexpr->inf_cst,&uexpr->sup_cst,intercept_inf, intercept_sup, uexpr->inf_cst, uexpr->sup_cst);
 	}
+	/* printf("after: "); */
+	/* expr_print(uexpr); */
+	/* printf("f_sup_u = %.10lf\n",f_sup_u); */
 	return f_sup_u;
 }
 
@@ -3135,12 +3131,13 @@ double get_lb_using_previous_layers(elina_manager_t *man, fppoly_t *fp, expr_t *
 	//size_t numlayers = fp->numlayers;
 	expr_t * lexpr = copy_expr(expr);
         fppoly_internal_t * pr = fppoly_init_from_manager(man,ELINA_FUNID_ASSIGN_LINEXPR_ARRAY);
+		double ret;
+		double best_res = -INFINITY;
 	for(k=layerno - 1; k >=0; k--){
-	  /* printf("k: %zu, activation = %d\n",k,fp->layers[k]->activation); */
 	//	fflush(stdout);	
 		neuron_t ** aux_neurons = fp->layers[k]->neurons;
 		expr_t * tmp_l;
-		
+				
 	   if(fp->layers[k]->type==FFN || fp->layers[k]->type==CONV){
 			
 		    if(fp->layers[k]->activation==RELU){
@@ -3172,7 +3169,20 @@ double get_lb_using_previous_layers(elina_manager_t *man, fppoly_t *fp, expr_t *
 				tmp_l = lexpr;
 		        	lexpr = lexpr_replace_log_bounds(pr,lexpr,aux_neurons);
 		        	free_expr(tmp_l);
-			}	
+			}
+
+			size_t num_neurons = lexpr->size;
+			double lb_inf = lexpr->inf_cst, lb_sup = lexpr->sup_cst;
+			for (i = 0; i < num_neurons; ++i) {
+			  double tmp1, tmp2;
+			  elina_double_interval_mul(&tmp1,&tmp2,aux_neurons[i]->lb,aux_neurons[i]->ub,lexpr->inf_coeff[i],lexpr->sup_coeff[i]);
+			  lb_inf += tmp1;
+			  lb_sup += tmp2;
+			}
+			if (k == (int)(layerno - 1) || lb_inf < best_res) {
+			  best_res = lb_inf;
+			}
+
 				tmp_l = lexpr;			
 				lexpr = expr_from_previous_layer(pr,lexpr, fp->layers[k]);		
 				free_expr(tmp_l);
@@ -3182,12 +3192,12 @@ double get_lb_using_previous_layers(elina_manager_t *man, fppoly_t *fp, expr_t *
 			lexpr = lexpr_replace_maxpool_or_lstm_bounds(pr,lexpr,aux_neurons);	
 			free_expr(tmp_l);
 		}
-	   /* expr_print(lexpr); */
+
 	}
 		
-	double res = compute_lb_from_expr(pr,lexpr,fp); 
+	double res = compute_lb_from_expr(pr,lexpr,fp);
 	return res;
-	
+	//return best_res;
 }
 
 
@@ -3197,6 +3207,7 @@ double get_ub_using_previous_layers(elina_manager_t *man, fppoly_t *fp, expr_t *
 	//size_t numlayers = fp->numlayers;
 	expr_t * uexpr = copy_expr(expr);
         fppoly_internal_t * pr = fppoly_init_from_manager(man,ELINA_FUNID_ASSIGN_LINEXPR_ARRAY);
+		double best_res = INFINITY;
 	for(k=layerno - 1; k >=0; k--){
 		neuron_t ** aux_neurons = fp->layers[k]->neurons;
 		expr_t * tmp_u;
@@ -3227,7 +3238,20 @@ double get_ub_using_previous_layers(elina_manager_t *man, fppoly_t *fp, expr_t *
 				tmp_u = uexpr;
 		        	uexpr = uexpr_replace_log_bounds(pr,uexpr,aux_neurons);
 		        	free_expr(tmp_u);
-			}	
+			}
+
+			size_t num_neurons = uexpr->size;
+			double ub_inf = uexpr->inf_cst, ub_sup = uexpr->sup_cst;
+			for (i = 0; i < num_neurons; ++i) {
+			  double tmp1, tmp2;
+			  elina_double_interval_mul(&tmp1,&tmp2,aux_neurons[i]->lb,aux_neurons[i]->ub,uexpr->inf_coeff[i],uexpr->sup_coeff[i]);
+			  ub_inf += tmp1;
+			  ub_sup += tmp2;
+			}
+			if (k == (int)(layerno - 1) || ub_sup < best_res) {
+			  best_res = ub_sup;
+			}
+
 			tmp_u = uexpr;			
 			uexpr = expr_from_previous_layer(pr,uexpr, fp->layers[k]);		
 			free_expr(tmp_u);
@@ -3240,9 +3264,9 @@ double get_ub_using_previous_layers(elina_manager_t *man, fppoly_t *fp, expr_t *
 			
 	}
 		
-	double res = compute_ub_from_expr(pr,uexpr,fp); 
+	double res = compute_ub_from_expr(pr,uexpr,fp);
 	return res;
-	
+	//return best_res;
 }
 
 void coeff_to_interval(elina_coeff_t *coeff, double *inf, double *sup){
@@ -3370,7 +3394,7 @@ void handle_lstm_layer(elina_manager_t *man, elina_abstract0_t *abs, double **we
 	  /* } */
 	}
 	
-	for(i=0; i< h; i++){ // DEBUG
+	for(i=0; i< h; i++){
 		expr_t *f_t_lexpr, *i_t_lexpr, *o_t_lexpr, *c_t_lexpr;
 		if(first_time_step){
 			i_t_lexpr =  create_dense_expr(weights[i],bias[i],d);
@@ -3418,7 +3442,9 @@ void handle_lstm_layer(elina_manager_t *man, elina_abstract0_t *abs, double **we
 		neuron->ub = ub_i_t;
 		lb_i_t = apply_sigmoid_lexpr(pr, &i_t_lexpr, neuron);
 		ub_i_t = apply_sigmoid_uexpr(pr, &i_t_uexpr, neuron);
-		
+		expr_print(i_t_lexpr);
+		expr_print(i_t_uexpr);
+
 		expr_t *o_t_uexpr = copy_expr(o_t_lexpr);
 		expr_t *tmp_o_t_lexpr = copy_expr(o_t_lexpr);
 		expr_t *tmp_o_t_uexpr = copy_expr(o_t_uexpr);
@@ -3448,11 +3474,11 @@ void handle_lstm_layer(elina_manager_t *man, elina_abstract0_t *abs, double **we
 		neuron->lb = lb_c_t;
 		neuron->ub = ub_c_t;
 		lb_c_t = apply_tanh_lexpr(pr,&c_t_lexpr, neuron);
-		ub_c_t = apply_tanh_uexpr(pr,&c_t_uexpr, neuron);			
-		
+		ub_c_t = apply_tanh_uexpr(pr,&c_t_uexpr, neuron);
+				
 		double width1 = ub_i_t + lb_i_t;
 		double width2 = ub_c_t + lb_c_t;
-		if(width1 < width2 || lb_c_t > 0){
+		if(true){
 			c_t_lexpr = multiply_expr(pr,c_t_lexpr,lb_i_t,ub_i_t);
 			c_t_uexpr = multiply_expr(pr,c_t_uexpr,lb_i_t,ub_i_t);
 		}
@@ -3497,13 +3523,13 @@ void handle_lstm_layer(elina_manager_t *man, elina_abstract0_t *abs, double **we
 		width2 = ub_c_t + lb_c_t; 
 
 		expr_t * h_t_lexpr, *h_t_uexpr;
-		/* if (i == 5) { */
-		/*   printf("cell:\n"); */
-		/*   expr_print(c_t_lexpr); */
-		/*   expr_print(c_t_uexpr); */
-		/*   printf("out:\n"); */
-		/*   printf("%lf %lf\n",lb_o_t,ub_o_t); */
-		/* } */
+		/* printf("=====> obtaining hidden...\n"); */
+		/* printf("cell:\n"); */
+		/* expr_print(c_t_lexpr); */
+		/* expr_print(c_t_uexpr); */
+		/* printf("out:\n"); */
+		/* expr_print(o_t_lexpr); */
+		/* expr_print(o_t_uexpr); */
 		if(width1 < width2 || lb_c_t > 0){
 			h_t_lexpr = multiply_expr(pr,c_t_lexpr,lb_o_t,ub_o_t);
 			h_t_uexpr = multiply_expr(pr,c_t_uexpr,lb_o_t,ub_o_t);
@@ -3513,6 +3539,10 @@ void handle_lstm_layer(elina_manager_t *man, elina_abstract0_t *abs, double **we
 			h_t_lexpr =  multiply_expr(pr,o_t_lexpr,lb_c_t,ub_c_t);
 			h_t_uexpr =  multiply_expr(pr,o_t_uexpr,lb_c_t,ub_c_t);
 		}
+		/* printf("hidden:\n"); */
+		/* expr_print(h_t_lexpr); */
+		/* expr_print(h_t_uexpr); */
+		/* printf("\n"); */
 
 		new_h_inf[i] = get_lb_using_previous_layers(man, fp, h_t_lexpr, lstm_index);
 		new_h_sup[i] = get_ub_using_previous_layers(man, fp, h_t_uexpr, lstm_index);
@@ -3528,15 +3558,14 @@ void handle_lstm_layer(elina_manager_t *man, elina_abstract0_t *abs, double **we
 	}
 	free_neuron(neuron);
 
+	printf("HIDDEN & CELL:\n");
 	for (i = 0; i < h; i++) { // DEBUG
 	  layer->c_t_inf[i] = new_c_inf[i];
 	  layer->c_t_sup[i] = new_c_sup[i];
 	  layer->h_t_inf[i] = new_h_inf[i];
 	  layer->h_t_sup[i] = new_h_sup[i];
-	  if (-new_h_inf[i] > new_h_sup[i]) {
-		printf("[%d] c_t: [%.5lf, %.5lf]\n", (int)i, new_c_inf[i], new_c_sup[i]);
-		printf("[%d] h_t: [%.5lf, %.5lf]\n", (int)i, new_h_inf[i], new_h_sup[i]);
-	  }
+	  printf("[%d] c_t: [%.10lf, %.10lf]\n", (int)i, new_c_inf[i], new_c_sup[i]);
+	  printf("[%d] h_t: [%.10lf, %.10lf]\n", (int)i, new_h_inf[i], new_h_sup[i]);
 	}
 	free(new_c_inf);
 	free(new_c_sup);
