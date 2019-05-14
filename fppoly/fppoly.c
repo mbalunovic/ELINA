@@ -2639,7 +2639,7 @@ void * update_state_using_previous_layers(void *args){
 
 void update_state_using_previous_layers_parallel(elina_manager_t *man, fppoly_t *fp, size_t layerno){
   	//size_t NUM_THREADS = get_nprocs();
-  size_t NUM_THREADS = 1; //sysconf(_SC_NPROCESSORS_ONLN);
+  size_t NUM_THREADS = sysconf(_SC_NPROCESSORS_ONLN);
 	nn_thread_t args[NUM_THREADS];
 	pthread_t threads[NUM_THREADS];
 	size_t num_out_neurons = fp->layers[layerno]->dims;
@@ -2869,14 +2869,15 @@ void handle_final_relu_layer(fppoly_internal_t *pr, output_abstract_t * out, neu
 }
 
 
-double apply_s_curve_lexpr(fppoly_internal_t *pr, expr_t **lexpr_p, neuron_t * neuron, bool is_sigmoid){
+double apply_s_curve_lexpr(fppoly_internal_t *pr, expr_t **lexpr_p, neuron_t * neuron, bool is_sigmoid, bool force_boxify){
 	expr_t * lexpr = *lexpr_p;
 	size_t i;
 	size_t size = lexpr->size;
 	double lb = neuron->lb;
 	double ub = neuron->ub;
+	/* printf("neuron lb = %.10lf, ub = %.10lf\n",lb,ub); */
 	bool boxify = false;
-	if (ub + lb < 0.1) {
+	if (ub + lb < 0.01) {
 	  boxify = true;
 	}
 	double slope_inf, slope_sup;
@@ -2887,8 +2888,8 @@ double apply_s_curve_lexpr(fppoly_internal_t *pr, expr_t **lexpr_p, neuron_t * n
 						1, lb, ub, is_sigmoid, &boxify);
 	/* printf("before: "); */
 	/* expr_print(lexpr); */
-	/* printf("[l] slope_inf = %.10lf, intercept_inf = %.10lf\n", slope_inf, intercept_inf); */
-	/* printf("[l] slope_sup = %.10lf, intercept_sup = %.10lf\n", slope_sup, intercept_sup); */
+	/* printf("\t[l] slope_inf = %.10lf, intercept_inf = %.10lf\n", slope_inf, intercept_inf); */
+	/* printf("\t[l] slope_sup = %.10lf, intercept_sup = %.10lf\n", slope_sup, intercept_sup); */
 
 	fesetround(FE_DOWNWARD);
 	double e_inf_l = is_sigmoid ? -exp(-lb) : -tanh(-lb);
@@ -2905,7 +2906,9 @@ double apply_s_curve_lexpr(fppoly_internal_t *pr, expr_t **lexpr_p, neuron_t * n
 		f_inf_l = e_inf_l;
 		f_inf_u = e_inf_u;
 	}
-	boxify = true;
+	if (force_boxify) {
+	  boxify = true;
+	}
 	if(boxify){
 		for(i=0; i< size; i++){
 			lexpr->inf_coeff[i] = 0.0;
@@ -2926,14 +2929,14 @@ double apply_s_curve_lexpr(fppoly_internal_t *pr, expr_t **lexpr_p, neuron_t * n
 	return f_inf_l;
 }
 
-double apply_s_curve_uexpr(fppoly_internal_t *pr, expr_t **uexpr_p, neuron_t * neuron, bool is_sigmoid){
+double apply_s_curve_uexpr(fppoly_internal_t *pr, expr_t **uexpr_p, neuron_t * neuron, bool is_sigmoid, bool force_boxify){
 	expr_t * uexpr = *uexpr_p;
 	size_t i;
 	size_t size = uexpr->size;
 	double lb = neuron->lb;
 	double ub = neuron->ub;
 	bool boxify = false;
-	if (ub + lb < 0.1) {
+	if (ub + lb < 0.01) {
 	  boxify = true;
 	}
 	double slope_inf, slope_sup;
@@ -2959,7 +2962,9 @@ double apply_s_curve_uexpr(fppoly_internal_t *pr, expr_t **uexpr_p, neuron_t * n
 		f_sup_l = e_sup_l;
 		f_sup_u = e_sup_u;
 	}
-	boxify = true;
+	if (force_boxify) {
+	  boxify = true;
+	}
 	if(boxify){
 		for(i=0; i< size; i++){
 			uexpr->inf_coeff[i] = 0.0;
@@ -2982,28 +2987,28 @@ double apply_s_curve_uexpr(fppoly_internal_t *pr, expr_t **uexpr_p, neuron_t * n
 }
 
 
-double apply_sigmoid_lexpr(fppoly_internal_t *pr, expr_t **lexpr_p, neuron_t * neuron){
-	return apply_s_curve_lexpr(pr,lexpr_p,neuron,true);
+double apply_sigmoid_lexpr(fppoly_internal_t *pr, expr_t **lexpr_p, neuron_t * neuron, bool force_boxify){
+  return apply_s_curve_lexpr(pr,lexpr_p,neuron,true,force_boxify);
 }
 
-double apply_tanh_lexpr(fppoly_internal_t *pr, expr_t **lexpr_p, neuron_t * neuron){
-	return apply_s_curve_lexpr(pr,lexpr_p,neuron,false);
+double apply_tanh_lexpr(fppoly_internal_t *pr, expr_t **lexpr_p, neuron_t * neuron, bool force_boxify){
+  return apply_s_curve_lexpr(pr,lexpr_p,neuron,false,force_boxify);
 }
 
-double apply_sigmoid_uexpr(fppoly_internal_t *pr, expr_t **uexpr_p, neuron_t * neuron){
-	return apply_s_curve_uexpr(pr,uexpr_p,neuron,true);
+double apply_sigmoid_uexpr(fppoly_internal_t *pr, expr_t **uexpr_p, neuron_t * neuron, bool force_boxify){
+  return apply_s_curve_uexpr(pr,uexpr_p,neuron,true,force_boxify);
 }
 
-double apply_tanh_uexpr(fppoly_internal_t *pr, expr_t **uexpr_p, neuron_t * neuron){
-	return apply_s_curve_uexpr(pr,uexpr_p,neuron,false);
+double apply_tanh_uexpr(fppoly_internal_t *pr, expr_t **uexpr_p, neuron_t * neuron, bool force_boxify){
+  return apply_s_curve_uexpr(pr,uexpr_p,neuron,false,force_boxify);
 }
 
 void handle_final_sigmoid_layer(fppoly_internal_t *pr, output_abstract_t * out, neuron_t **neurons, size_t size, bool has_sigmoid){
 	size_t i;
         if(has_sigmoid){
 		for(i=0; i < size; i++){
-			out->output_inf[i] = apply_sigmoid_lexpr(pr,&out->lexpr[i],neurons[i]);
-			out->output_sup[i] = apply_sigmoid_uexpr(pr,&out->uexpr[i],neurons[i]);
+		  out->output_inf[i] = apply_sigmoid_lexpr(pr,&out->lexpr[i],neurons[i],false);
+		  out->output_sup[i] = apply_sigmoid_uexpr(pr,&out->uexpr[i],neurons[i],false);
 		}
 	}
 	else{
@@ -3018,8 +3023,8 @@ void handle_final_tanh_layer(fppoly_internal_t *pr, output_abstract_t * out, neu
 	size_t i;
         if(has_tanh){
 		for(i=0; i < size; i++){
-			out->output_inf[i] = apply_tanh_lexpr(pr,&out->lexpr[i],neurons[i]);
-			out->output_sup[i] = apply_tanh_uexpr(pr,&out->uexpr[i],neurons[i]);
+		  out->output_inf[i] = apply_tanh_lexpr(pr,&out->lexpr[i],neurons[i],false);
+		  out->output_sup[i] = apply_tanh_uexpr(pr,&out->uexpr[i],neurons[i],false);
 		}
 	}
 	else{
@@ -3195,9 +3200,9 @@ double get_lb_using_previous_layers(elina_manager_t *man, fppoly_t *fp, expr_t *
 
 	}
 		
-	double res = compute_lb_from_expr(pr,lexpr,fp);
-	return res;
-	//return best_res;
+	/* double res = compute_lb_from_expr(pr,lexpr,fp); */
+	/* return res; */
+	return best_res;
 }
 
 
@@ -3241,17 +3246,16 @@ double get_ub_using_previous_layers(elina_manager_t *man, fppoly_t *fp, expr_t *
 			}
 
 			size_t num_neurons = uexpr->size;
-			double ub_inf = uexpr->inf_cst, ub_sup = uexpr->sup_cst;
+			double ub_sup = uexpr->sup_cst;
 			for (i = 0; i < num_neurons; ++i) {
 			  double tmp1, tmp2;
 			  elina_double_interval_mul(&tmp1,&tmp2,aux_neurons[i]->lb,aux_neurons[i]->ub,uexpr->inf_coeff[i],uexpr->sup_coeff[i]);
-			  ub_inf += tmp1;
 			  ub_sup += tmp2;
 			}
 			if (k == (int)(layerno - 1) || ub_sup < best_res) {
 			  best_res = ub_sup;
 			}
-
+			
 			tmp_u = uexpr;			
 			uexpr = expr_from_previous_layer(pr,uexpr, fp->layers[k]);		
 			free_expr(tmp_u);
@@ -3264,9 +3268,9 @@ double get_ub_using_previous_layers(elina_manager_t *man, fppoly_t *fp, expr_t *
 			
 	}
 		
-	double res = compute_ub_from_expr(pr,uexpr,fp);
-	return res;
-	//return best_res;
+	/* double res = compute_ub_from_expr(pr,uexpr,fp); */
+	/* return res; */
+	return best_res;
 }
 
 void coeff_to_interval(elina_coeff_t *coeff, double *inf, double *sup){
@@ -3362,6 +3366,201 @@ void create_lstm_layer(elina_manager_t *man, elina_abstract0_t *abs, size_t h, b
   }
 }
 
+void dp_multiply(fppoly_internal_t *pr, size_t h, expr_t* res,
+				   double a_lb, double a_ub, expr_t *a,
+				   double b_lb, double b_ub, expr_t *b) {
+  size_t i;
+  double a_0 = 0.5 * (a_ub - a_lb), b_0 = 0.5 * (b_ub - b_lb);
+  double a_r = 0.5 * (a_ub + a_lb), b_r = 0.5 * (b_ub + b_lb);
+  
+  /* printf("a_0 = %.10lf, b_0 = %.10lf\n", a_0, b_0); */
+  /* printf("a_r = %.10lf, b_r = %.10lf\n", a_r, b_r); */
+  /* printf("erorr: %.10lf\n", (a_r * b_r)); */
+  /* printf("\n"); */
+  
+  res->inf_cst = (a_r * b_r) + (a_0 * b_0);
+  res->sup_cst = (a_r * b_r) - (a_0 * b_0);
+  double tmp_a_inf, tmp_a_sup, tmp_b_inf, tmp_b_sup;
+  elina_double_interval_mul(&tmp_a_inf, &tmp_a_sup, a->inf_cst, a->sup_cst, -b_0, b_0);
+  elina_double_interval_mul(&tmp_b_inf, &tmp_b_sup, b->inf_cst, b->sup_cst, -a_0, a_0);
+  res->inf_cst += tmp_a_inf + tmp_b_inf;
+  res->sup_cst += tmp_a_sup + tmp_b_sup;
+  
+  for (i = 0; i < h; ++i) {
+  	res->inf_coeff[i] = 0;
+  	res->sup_coeff[i] = 0;
+  	double tmp1, tmp2;
+  	elina_double_interval_mul_expr_coeff(pr, &tmp1, &tmp2, -b_0, b_0, a->inf_coeff[i], a->sup_coeff[i]);
+	elina_double_interval_add_cst_coeff(pr, &res->inf_coeff[i], &res->sup_coeff[i], tmp1, tmp2, res->inf_coeff[i], res->sup_coeff[i]);
+  	elina_double_interval_mul_expr_coeff(pr, &tmp1, &tmp2, -a_0, a_0, b->inf_coeff[i], b->sup_coeff[i]);
+	elina_double_interval_add_cst_coeff(pr, &res->inf_coeff[i], &res->sup_coeff[i], tmp1, tmp2, res->inf_coeff[i], res->sup_coeff[i]);
+  }
+}
+
+void mul_exprs(fppoly_internal_t *pr, size_t h, expr_t* res_lexpr, expr_t* res_uexpr,
+			   double a_lb, double a_ub, expr_t* a_lexpr, expr_t* a_uexpr,
+			   double b_lb, double b_ub, expr_t* b_lexpr, expr_t* b_uexpr) {
+  bool boxify = false;
+  if (!boxify && a_lb < 0 && b_lb < 0) {
+  	dp_multiply(pr, h, res_lexpr, a_lb, a_ub, a_lexpr, b_lb, b_ub, b_lexpr);
+  	dp_multiply(pr, h, res_uexpr, a_lb, a_ub, a_uexpr, b_lb, b_ub, b_uexpr);
+  } else if (false && !boxify && a_ub < 0 && b_lb < 0) {
+  	dp_multiply(pr, h, res_lexpr, a_lb, a_ub, a_lexpr, b_lb, b_ub, b_uexpr);
+  	dp_multiply(pr, h, res_uexpr, a_lb, a_ub, a_uexpr, b_lb, b_ub, b_lexpr);
+  } else if (false && !boxify && b_ub < 0 && a_lb < 0) {
+  	dp_multiply(pr, h, res_lexpr, a_lb, a_ub, a_uexpr, b_lb, b_ub, b_lexpr);
+  	dp_multiply(pr, h, res_uexpr, a_lb, a_ub, a_lexpr, b_lb, b_ub, a_uexpr);
+  } else if (false && !boxify && a_ub < 0 && b_ub < 0) {
+  	dp_multiply(pr, h, res_lexpr, a_lb, a_ub, a_uexpr, b_lb, b_ub, b_uexpr);
+  	dp_multiply(pr, h, res_uexpr, a_lb, a_ub, a_lexpr, b_lb, b_ub, a_lexpr);
+  } else {
+	double res_lb, res_ub;
+	elina_double_interval_mul(&res_lb, &res_ub, a_lb, a_ub, b_lb, b_ub);
+	size_t i;
+	for (i = 0; i < h; ++i) {
+	  res_lexpr->inf_coeff[i] = res_uexpr->inf_coeff[i] = 0;
+	  res_lexpr->sup_coeff[i] = res_uexpr->sup_coeff[i] = 0;
+	}
+	res_lexpr->inf_cst = res_uexpr->inf_cst = res_lb;
+	res_lexpr->sup_cst = res_uexpr->sup_cst = res_ub;
+  }
+}
+
+double dmin(double a, double b) { return a < b ? a : b; }
+double dmax(double a, double b) { return a > b ? a : b; }
+double s(double x) { return 1.0 / (1.0 + exp(-x)); }
+double s_(double x) { return exp(-x) / ((1 + exp(-x)) * (1 + exp(-x))); }
+double t(double x) { return tanh(x); }
+double t_(double x) { return 1 - tanh(x) * tanh(x); }
+double f(double x, double y) { return s(x) * t(y); }
+double dxf(double x, double y) { return s_(x) * t(y); }
+double dyf(double x, double y) { return s(x) * t_(y); }
+void set_plane(double *A, double *B, double *C, double tA, double tB, double tC) { *A = tA; *B = tB; *C = tC; }
+
+void compute_sigmoid_mul_tanh_planes(double lx, double ux, double ly, double uy,
+									 double* Al, double* Bl, double* Cl,
+									 double* Au, double* Bu, double* Cu) {
+  if (ly >= 0) {
+	double x_slope = dmin(dxf(ux, uy), (f(ux, uy) - f(lx, uy)) / (ux - lx));
+	double Au1 = x_slope;
+	double Bu1 = 0;
+	double Cu1 = x_slope * (-ux) + f(ux, uy);
+
+	double y_slope = dmin(dyf(ux, uy), (f(ux, uy) - f(ux, ly)) / (uy - ly));
+	double Au2 = 0;
+	double Bu2 = y_slope;
+	double Cu2 = y_slope * (-uy) + f(ux, uy);
+	
+	if ((ux + lx) * Au1 / 2 + Cu1 < (uy + ly) * Bu2 / 2 + Cu2) {
+	  set_plane(Au, Bu, Cu, Au1, Bu1, Cu1);
+	} else {
+	  set_plane(Au, Bu, Cu, Au2, Bu2, Cu2);
+	}
+	
+	x_slope = dmin(dxf(lx, ly), (f(lx, ly) - f(ux, ly)) / (lx - ux));
+	double Al1 = x_slope;
+	double Bl1 = 0;
+	double Cl1 = x_slope * (-lx) + f(lx, ly);
+	y_slope = dmin(dyf(lx, ly), (f(lx, ly) - f(lx, uy)) / (ly - uy));
+	double Al2 = 0;
+	double Bl2 = y_slope;
+	double Cl2 = y_slope * (-ly) + f(lx, ly);
+
+	if ((ux + lx) * Al1 / 2 + Cl1 > (uy + ly) * Bl2 / 2 + Cl2) {
+	  set_plane(Al, Bl, Cl, Al1, Bl1, Cl1);
+	} else {
+	  set_plane(Al, Bl, Cl, Al2, Bl2, Cl2);
+	}
+  } else if (ly <= 0 && 0 <= uy) {
+	double x_slope = dmin(dxf(ux, uy), (f(ux, uy) - f(lx, uy)) / (ux - lx));
+	double Au1 = x_slope;
+	double Bu1 = 0;
+	double Cu1 = x_slope * (-ux) + f(ux, uy);
+
+	double y_slope = dmin(dyf(ux, uy), (f(ux, uy) - f(lx, ly)) / (uy - ly));
+	double Au2 = 0;
+	double Bu2 = y_slope;
+	double Cu2 = y_slope * (-uy) + f(ux, uy);
+
+	if ((ux + lx) * Au1 / 2 + Cu1 < (uy + ly) * Bu2 / 2 + Cu2) {
+	  set_plane(Au, Bu, Cu, Au1, Bu1, Cu1);
+	} else {
+	  set_plane(Au, Bu, Cu, Au2, Bu2, Cu2);
+	}
+
+	x_slope = dmax(dxf(ux, ly), (f(ux, ly) - f(lx, ly)) / (ux - lx));
+	double Al1 = x_slope;
+	double Bl1 = 0;
+	double Cl1 = x_slope * (-ux) + f(ux, ly);
+	
+	y_slope = dmin(dyf(ux, ly), (f(ux, ly) - f(lx, uy)) / (ly - uy));
+	double Al2 = 0;
+	double Bl2 = y_slope;
+	double Cl2 = y_slope * (-ly) + f(ux, ly);
+
+	if ((ux + lx) * Al1 / 2 + Cl1 > (uy + ly) * Bl2 / 2 + Cl2) {
+	  set_plane(Al, Bl, Cl, Al1, Bl1, Cl1);
+	} else {
+	  set_plane(Al, Bl, Cl, Al2, Bl2, Cl2);
+	}
+  } else {
+	double x_slope = dmax(dxf(lx, uy), (f(lx, uy) - f(ux, uy)) / (lx - ux));
+	double Au1 = x_slope;
+	double Bu1 = 0;
+	double Cu1 = x_slope * (-lx) + f(lx, uy);
+
+	double y_slope = dmin(dyf(lx, uy), (f(lx, uy) - f(lx, ly)) / (uy - ly));
+	double Au2 = 0;
+	double Bu2 = y_slope;
+	double Cu2 = y_slope * (-uy) + f(lx, uy);
+	
+	if ((ux + lx) * Au1 / 2 + Cu1 < (uy + ly) * Bu2 / 2 + Cu2) {
+	  set_plane(Au, Bu, Cu, Au1, Bu1, Cu1);
+	} else {
+	  set_plane(Au, Bu, Cu, Au2, Bu2, Cu2);
+	}
+	
+	x_slope = dmax(dxf(ux, ly), (f(ux, ly) - f(lx, ly)) / (ux - lx));
+	double Al1 = x_slope;
+	double Bl1 = 0;
+	double Cl1 = x_slope * (-ux) + f(ux, ly);
+	
+	y_slope = dmin(dyf(ux, ly), (f(ux, ly) - f(ux, uy)) / (ly - uy));
+	double Al2 = 0;
+	double Bl2 = y_slope;
+	double Cl2 = y_slope * (-ly) + f(ux, ly);
+
+	if ((ux + lx) * Al1 / 2 + Cl1 > (uy + ly) * Bl2 / 2 + Cl2) {
+	  set_plane(Al, Bl, Cl, Al1, Bl1, Cl1);
+	} else {
+	  set_plane(Al, Bl, Cl, Al2, Bl2, Cl2);
+	}
+  }
+}
+
+// computes sigmoid(a) * tanh(b)
+void mul_sigmoid_tanh_exprs(fppoly_internal_t *pr, size_t h, expr_t* res_lexpr, expr_t* res_uexpr,
+							double a_lb, double a_ub, expr_t* a_lexpr, expr_t* a_uexpr,
+							double b_lb, double b_ub, expr_t* b_lexpr, expr_t* b_uexpr) {
+  double Al, Bl, Cl, Au, Bu, Cu;
+  size_t i;
+  
+  compute_sigmoid_mul_tanh_planes(-a_lb, a_ub, -b_lb, b_ub, &Al, &Bl, &Cl, &Au, &Bu, &Cu);
+  /* printf("%.5lf %.5lf ... %.5lf %.5lf\n",-a_lb,a_ub,-b_lb,b_ub); */
+  /* printf("lower_plane = %.3lf*x + %.3lf*y + %.3lf, upper_plane = %.3lf*x + %.3lf*y + %.3lf\n",Al,Bl,Cl,Au,Bu,Cu); */
+
+  res_lexpr = multiply_expr(pr, a_lexpr, -Al, Al);
+  expr_t* tmp_lexpr = multiply_expr(pr, b_lexpr, -Bl, Bl);
+  add_expr(pr, res_lexpr, tmp_lexpr);
+  elina_double_interval_add_cst_coeff(pr, &res_lexpr->inf_cst, &res_lexpr->sup_cst, -Cl, Cl, res_lexpr->inf_cst, res_lexpr->sup_cst);
+
+  res_uexpr = multiply_expr(pr, a_uexpr, -Au, Au);
+  expr_t* tmp_uexpr = multiply_expr(pr, b_uexpr, -Bu, Bu);
+  add_expr(pr, res_uexpr, tmp_uexpr);
+  elina_double_interval_add_cst_coeff(pr, &res_uexpr->inf_cst, &res_uexpr->sup_cst, -Cu, Cu, res_uexpr->inf_cst, res_uexpr->sup_cst);
+}
+
+
 void handle_lstm_layer(elina_manager_t *man, elina_abstract0_t *abs, double **weights,  double *bias, size_t d, size_t h){
 	fppoly_t *fp = fppoly_of_abstract0(abs);
 	fppoly_internal_t *pr = fppoly_init_from_manager(man, ELINA_FUNID_ASSIGN_LINEXPR_ARRAY);
@@ -3371,6 +3570,23 @@ void handle_lstm_layer(elina_manager_t *man, elina_abstract0_t *abs, double **we
 	size_t i;
 	neuron_t * neuron = neuron_alloc();
 	bool first_time_step = (layer->h_t_inf==NULL && layer->h_t_sup==NULL);
+	bool force_boxify = true; //first_time_step;
+
+	double* prev_lb = (double*)malloc(h*sizeof(double));
+	double* prev_ub = (double*)malloc(h*sizeof(double));
+	layer_t *prev_layer = fp->layers[lstm_index-1];
+	for (i = 0; i < prev_layer->dims; ++i) {
+	  // assumes there is relu before LSTM
+	  prev_lb[i] = prev_layer->neurons[i]->lb;
+	  prev_ub[i] = prev_layer->neurons[i]->ub;
+	  if (prev_lb[i] > 0) {
+		prev_lb[i] = 0;
+	  }
+	  if (prev_ub[i] < 0) {
+		prev_ub[i] = 0;
+	  }
+	  /* printf("prev_neuron: %lf %lf\n",prev_lb[i],prev_ub[i]); */
+	}
 
 	double *new_h_inf = (double*)malloc(h*sizeof(double));
 	double *new_h_sup = (double*)malloc(h*sizeof(double));
@@ -3395,7 +3611,7 @@ void handle_lstm_layer(elina_manager_t *man, elina_abstract0_t *abs, double **we
 	}
 	
 	for(i=0; i< h; i++){
-		expr_t *f_t_lexpr, *i_t_lexpr, *o_t_lexpr, *c_t_lexpr;
+	    expr_t *f_t_lexpr, *i_t_lexpr, *o_t_lexpr, *c_t_lexpr;
 		if(first_time_step){
 			i_t_lexpr =  create_dense_expr(weights[i],bias[i],d);
 			c_t_lexpr =  create_dense_expr(weights[h+i],bias[h+i],d);	
@@ -3416,136 +3632,212 @@ void handle_lstm_layer(elina_manager_t *man, elina_abstract0_t *abs, double **we
 			free_expr(tmp3);
 			free_expr(tmp4);
 		}
-
+		
+		// compute forget gate
 		expr_t *f_t_uexpr = copy_expr(f_t_lexpr);
+		expr_t *pre_f_t_lexpr = copy_expr(f_t_lexpr);
+		expr_t *pre_f_t_uexpr = copy_expr(f_t_lexpr);
+		
 		expr_t *tmp_f_t_lexpr = copy_expr(f_t_lexpr);
 		expr_t *tmp_f_t_uexpr = copy_expr(f_t_uexpr);
-		double lb_f_t = get_lb_using_previous_layers(man, fp, tmp_f_t_lexpr, lstm_index);
-		double ub_f_t = get_ub_using_previous_layers(man, fp, tmp_f_t_uexpr, lstm_index);
+		double pre_lb_f_t = get_lb_using_previous_layers(man, fp, tmp_f_t_lexpr, lstm_index);
+		double pre_ub_f_t = get_ub_using_previous_layers(man, fp, tmp_f_t_uexpr, lstm_index);
 		free_expr(tmp_f_t_lexpr);
 		free_expr(tmp_f_t_uexpr);
 
-		neuron->lb = lb_f_t;
-		neuron->ub = ub_f_t;
-		lb_f_t = apply_sigmoid_lexpr(pr, &f_t_lexpr, neuron);
-		ub_f_t = apply_sigmoid_uexpr(pr, &f_t_uexpr, neuron);
+		neuron->lb = pre_lb_f_t;
+		neuron->ub = pre_ub_f_t;
+		double lb_f_t = apply_sigmoid_lexpr(pr, &f_t_lexpr, neuron, force_boxify);
+		double ub_f_t = apply_sigmoid_uexpr(pr, &f_t_uexpr, neuron, force_boxify);
 
+		// compute input gate
 		expr_t *i_t_uexpr = copy_expr(i_t_lexpr);
+		expr_t *pre_i_t_lexpr = copy_expr(i_t_lexpr);
+		expr_t *pre_i_t_uexpr = copy_expr(i_t_uexpr);
+		
 		expr_t *tmp_i_t_lexpr = copy_expr(i_t_lexpr);
 		expr_t *tmp_i_t_uexpr = copy_expr(i_t_uexpr);
-		double lb_i_t = get_lb_using_previous_layers(man, fp, tmp_i_t_lexpr,lstm_index);
-		double ub_i_t = get_ub_using_previous_layers(man, fp, tmp_i_t_uexpr, lstm_index);	
+		double pre_lb_i_t = get_lb_using_previous_layers(man, fp, tmp_i_t_lexpr,lstm_index);
+		double pre_ub_i_t = get_ub_using_previous_layers(man, fp, tmp_i_t_uexpr, lstm_index);	
 		free_expr(tmp_i_t_lexpr);
 		free_expr(tmp_i_t_uexpr);
 		
-		neuron->lb = lb_i_t;
-		neuron->ub = ub_i_t;
-		lb_i_t = apply_sigmoid_lexpr(pr, &i_t_lexpr, neuron);
-		ub_i_t = apply_sigmoid_uexpr(pr, &i_t_uexpr, neuron);
-		expr_print(i_t_lexpr);
-		expr_print(i_t_uexpr);
+		neuron->lb = pre_lb_i_t;
+		neuron->ub = pre_ub_i_t;
+		double lb_i_t = apply_sigmoid_lexpr(pr, &i_t_lexpr, neuron, force_boxify);
+		double ub_i_t = apply_sigmoid_uexpr(pr, &i_t_uexpr, neuron, force_boxify);
 
+		// compute output gate
 		expr_t *o_t_uexpr = copy_expr(o_t_lexpr);
+		expr_t *pre_o_t_lexpr = copy_expr(o_t_lexpr);
+		expr_t *pre_o_t_uexpr = copy_expr(o_t_uexpr);
+		
 		expr_t *tmp_o_t_lexpr = copy_expr(o_t_lexpr);
 		expr_t *tmp_o_t_uexpr = copy_expr(o_t_uexpr);
-		double lb_o_t = get_lb_using_previous_layers(man, fp, tmp_o_t_lexpr, lstm_index);
-		double ub_o_t = get_ub_using_previous_layers(man, fp, tmp_o_t_uexpr, lstm_index);
+		double pre_lb_o_t = get_lb_using_previous_layers(man, fp, tmp_o_t_lexpr, lstm_index);
+		double pre_ub_o_t = get_ub_using_previous_layers(man, fp, tmp_o_t_uexpr, lstm_index);
 		free_expr(tmp_o_t_lexpr);
 		free_expr(tmp_o_t_uexpr);
 
-		neuron->lb = lb_o_t;
-		neuron->ub = ub_o_t;		
-		lb_o_t = apply_sigmoid_lexpr(pr, &o_t_lexpr, neuron);
-		ub_o_t = apply_sigmoid_uexpr(pr, &o_t_uexpr, neuron);
+		neuron->lb = pre_lb_o_t;
+		neuron->ub = pre_ub_o_t;		
+		double lb_o_t = apply_sigmoid_lexpr(pr, &o_t_lexpr, neuron, force_boxify);
+		double ub_o_t = apply_sigmoid_uexpr(pr, &o_t_uexpr, neuron, force_boxify);
 		
 		out_neurons[i]->lb = lb_o_t;
 		out_neurons[i]->ub = ub_o_t;
 		out_neurons[i]->lexpr = o_t_lexpr;
 		out_neurons[i]->uexpr = o_t_uexpr;
 
+		// compute cell state
 		expr_t *c_t_uexpr = copy_expr(c_t_lexpr);
+		expr_t *pre_c_t_lexpr = copy_expr(c_t_lexpr);
+		expr_t *pre_c_t_uexpr = copy_expr(c_t_uexpr);
+		
 		expr_t *tmp_c_t_lexpr = copy_expr(c_t_lexpr);
 		expr_t *tmp_c_t_uexpr = copy_expr(c_t_uexpr);
-		double lb_c_t = get_lb_using_previous_layers(man, fp, tmp_c_t_lexpr, lstm_index);
-		double ub_c_t = get_ub_using_previous_layers(man, fp, tmp_c_t_uexpr, lstm_index);
+		double pre_lb_c_t = get_lb_using_previous_layers(man, fp, tmp_c_t_lexpr, lstm_index);
+		double pre_ub_c_t = get_ub_using_previous_layers(man, fp, tmp_c_t_uexpr, lstm_index);
 		free_expr(tmp_c_t_lexpr);
 		free_expr(tmp_c_t_uexpr);
 		
-		neuron->lb = lb_c_t;
-		neuron->ub = ub_c_t;
-		lb_c_t = apply_tanh_lexpr(pr,&c_t_lexpr, neuron);
-		ub_c_t = apply_tanh_uexpr(pr,&c_t_uexpr, neuron);
-				
+		neuron->lb = pre_lb_c_t;
+		neuron->ub = pre_ub_c_t;
+		double lb_c_t = apply_tanh_lexpr(pr,&c_t_lexpr, neuron, force_boxify);
+		double ub_c_t = apply_tanh_uexpr(pr,&c_t_uexpr, neuron, force_boxify);
+		
+		/* printf("multiply cell and input:\n"); */
+		/* printf("cell:\n"); */
+		/* expr_print(c_t_lexpr); */
+		/* expr_print(c_t_uexpr); */
+		/* printf("lb_c_t = %.10lf, ub_c_t = %.10lf\n",lb_c_t,ub_c_t); */
+		/* printf("input:\n"); */
+		/* expr_print(i_t_lexpr); */
+		/* expr_print(i_t_uexpr); */
+		/* printf("lb_i_t = %.10lf, ub_i_t = %.10lf\n",lb_i_t,ub_i_t); */
+		/* printf("\n"); */
 		double width1 = ub_i_t + lb_i_t;
 		double width2 = ub_c_t + lb_c_t;
-		if(true){
-			c_t_lexpr = multiply_expr(pr,c_t_lexpr,lb_i_t,ub_i_t);
-			c_t_uexpr = multiply_expr(pr,c_t_uexpr,lb_i_t,ub_i_t);
-		}
-		else{
-		  // NOTE: This is sound only if lb_c_t < 0
-		  c_t_lexpr = multiply_expr(pr,i_t_lexpr,lb_c_t,ub_c_t);
-		  c_t_uexpr = multiply_expr(pr,i_t_uexpr,lb_c_t,ub_c_t);
-		}
+		
+		/* printf("====================================================\n"); */
+		/* if (false && lb_c_t < 0 && lb_i_t < 0) { */
+		/*   /\* printf("lb_c_t = %.10lf, ub_c_t = %.10lf\n",lb_c_t,ub_c_t); *\/ */
+		/*   /\* printf("lb_i_t = %.10lf, ub_i_t = %.10lf\n",lb_i_t,ub_i_t); *\/ */
+		/*   /\* expr_print(c_t_lexpr); *\/ */
+		/*   /\* expr_print(i_t_lexpr); *\/ */
+		/*   expr_t* res_lexpr = copy_expr(c_t_lexpr); */
+		/*   expr_t* res_uexpr = copy_expr(c_t_uexpr); */
+		/*   dp_multiply(pr, h, res_lexpr, lb_c_t, ub_c_t, c_t_lexpr, lb_i_t, ub_i_t, i_t_lexpr, prev_lb, prev_ub); */
+		/*   dp_multiply(pr, h, res_uexpr, lb_c_t, ub_c_t, c_t_uexpr, lb_i_t, ub_i_t, i_t_uexpr, prev_lb, prev_ub); */
+		/*   c_t_lexpr = res_lexpr; */
+		/*   c_t_uexpr = res_uexpr; */
+		/* } else { */
+		/*   if (true) { //width1 < width2 || lb_c_t >= 0){ */
+		/* 	c_t_lexpr = multiply_expr(pr,c_t_lexpr,lb_i_t,ub_i_t); */
+		/* 	c_t_uexpr = multiply_expr(pr,c_t_uexpr,lb_i_t,ub_i_t); */
+		/*   } */
+		/*   else{ */
+		/* 	// NOTE: This is sound only if lb_c_t < 0 */
+		/* 	c_t_lexpr = multiply_expr(pr,i_t_lexpr,lb_c_t,ub_c_t); */
+		/* 	c_t_uexpr = multiply_expr(pr,i_t_uexpr,lb_c_t,ub_c_t); */
+		/*   } */
+		/* } */
+		expr_t* tmp_c_lexpr = copy_expr(c_t_lexpr);
+		expr_t* tmp_c_uexpr = copy_expr(c_t_uexpr);
+		/* printf("mul cell x input:\n"); */
+		mul_exprs(pr,h,tmp_c_lexpr,tmp_c_uexpr,lb_c_t,ub_c_t,c_t_lexpr,c_t_uexpr,lb_i_t,ub_i_t,i_t_lexpr,i_t_uexpr);
+		/* mul_sigmoid_tanh_exprs(pr,h,tmp_c_lexpr,tmp_c_uexpr,lb_c_t,ub_c_t,c_t_lexpr,c_t_uexpr,lb_i_t,ub_i_t,i_t_lexpr,i_t_uexpr); */
+		c_t_lexpr = tmp_c_lexpr;
+		c_t_uexpr = tmp_c_uexpr;
 		
 		if(!first_time_step){
-		  if (layer->c_t_inf[i] > 0) {
-			double tmp_l, tmp_u;
-			elina_double_interval_mul_expr_coeff(pr, &tmp_l, &tmp_u, lb_f_t, ub_f_t, layer->c_t_inf[i], layer->c_t_sup[i]);
-			c_t_lexpr->inf_cst += tmp_l;
-			c_t_uexpr->sup_cst += tmp_u;
-		  } else {
-			expr_t *tmp_l, *tmp_u;
-		  	tmp_l = multiply_expr(pr,f_t_lexpr,layer->c_t_inf[i],layer->c_t_sup[i]);
-		  	tmp_u = multiply_expr(pr,f_t_uexpr,layer->c_t_inf[i],layer->c_t_sup[i]);
-		  	add_expr(pr,c_t_lexpr,tmp_l);
-		  	add_expr(pr,c_t_uexpr,tmp_u);
-		  	free_expr(tmp_l);
-		  	free_expr(tmp_u);
+		  expr_t* tmp_lexpr = copy_expr(f_t_lexpr);
+		  expr_t* tmp_uexpr = copy_expr(f_t_uexpr);
+		  expr_t* prev_c_lexpr = copy_expr(c_t_lexpr);
+		  expr_t* prev_c_uexpr = copy_expr(c_t_uexpr);
+
+		  size_t j;
+		  for (j = 0; j < h; ++j) {
+			prev_c_lexpr->inf_coeff[j] = prev_c_uexpr->inf_coeff[j] = 0;
+			prev_c_lexpr->sup_coeff[j] = prev_c_uexpr->sup_coeff[j] = 0;
 		  }
+		  prev_c_lexpr->inf_cst = prev_c_uexpr->inf_cst = layer->c_t_inf[i];
+		  prev_c_lexpr->sup_cst = prev_c_uexpr->sup_cst = layer->c_t_sup[i];
+		  mul_exprs(pr,h,tmp_lexpr,tmp_uexpr,
+					lb_f_t,ub_f_t,f_t_lexpr,f_t_uexpr,
+					layer->c_t_inf[i],layer->c_t_sup[i],prev_c_lexpr,prev_c_uexpr);
+		  add_expr(pr,c_t_lexpr,tmp_lexpr);
+		  add_expr(pr,c_t_uexpr,tmp_uexpr);
+		  
+		  /* if (layer->c_t_inf[i] > 0 && layer->c_t_sup[i] > 0) { */
+		  /* 	double tmp_l, tmp_u; */
+		  /* 	elina_double_interval_mul_expr_coeff(pr, &tmp_l, &tmp_u, lb_f_t, ub_f_t, layer->c_t_inf[i], layer->c_t_sup[i]); */
+		  /* 	c_t_lexpr->inf_cst += tmp_l; */
+		  /* 	c_t_uexpr->sup_cst += tmp_u; */
+		  /* } else { */
+		  /* 	expr_t *tmp_l, *tmp_u; */
+		  /* 	if (layer->c_t_inf[i] < 0) { */
+		  /* 	  tmp_l = multiply_expr(pr,f_t_lexpr,layer->c_t_inf[i],layer->c_t_sup[i]); */
+		  /* 	  tmp_u = multiply_expr(pr,f_t_uexpr,layer->c_t_inf[i],layer->c_t_sup[i]); */
+		  /* 	} else { */
+		  /* 	  tmp_l = multiply_expr(pr,f_t_uexpr,layer->c_t_inf[i],layer->c_t_sup[i]); */
+		  /* 	  tmp_u = multiply_expr(pr,f_t_lexpr,layer->c_t_inf[i],layer->c_t_sup[i]); */
+		  /* 	} */
+		  /* 	/\* printf("adding control to prev\n"); *\/ */
+		  /* 	/\* expr_print(c_t_lexpr); *\/ */
+		  /* 	/\* expr_print(tmp_l); *\/ */
+		  /* 	/\* printf("...\n"); *\/ */
+		  /* 	add_expr(pr,c_t_lexpr,tmp_l); */
+		  /* 	add_expr(pr,c_t_uexpr,tmp_u); */
+		  /* 	free_expr(tmp_l); */
+		  /* 	free_expr(tmp_u); */
+		  /* } */
 		}
 
 		tmp_c_t_lexpr = copy_expr(c_t_lexpr);
 		tmp_c_t_uexpr = copy_expr(c_t_uexpr);
+
 		lb_c_t = get_lb_using_previous_layers(man, fp, tmp_c_t_lexpr, lstm_index);
 		ub_c_t = get_ub_using_previous_layers(man, fp, tmp_c_t_uexpr, lstm_index);
+		/* printf("lb_c_t = %.10lf, ub_c_t = %.10lf\n",lb_c_t,ub_c_t); */
+		/* printf("====================================================\n"); */
 		free_expr(tmp_c_t_lexpr);
 		free_expr(tmp_c_t_uexpr);
+
+		/* printf("c_t:\n"); */
+		/* expr_print(c_t_lexpr); */
+		/* expr_print(c_t_uexpr); */
+		/* printf("lb_c_t = %.10lf, ub_c_t = %.10lf\n",lb_c_t,ub_c_t); */
+		/* printf("\n"); */
 
 		new_c_inf[i] = lb_c_t;
 		new_c_sup[i] = ub_c_t;
 		neuron->lb = lb_c_t;
 		neuron->ub = ub_c_t;
-		lb_c_t = apply_tanh_lexpr(pr,&c_t_lexpr, neuron);
-		ub_c_t = apply_tanh_uexpr(pr,&c_t_uexpr, neuron);
+		lb_c_t = apply_tanh_lexpr(pr,&c_t_lexpr, neuron, force_boxify);
+		ub_c_t = apply_tanh_uexpr(pr,&c_t_uexpr, neuron, force_boxify);
+		/* printf("lb_c_t = %.10lf, ub_c_t = %.10lf\n",lb_c_t,ub_c_t); */
 		
 		width1 = ub_o_t + lb_o_t;
 		width2 = ub_c_t + lb_c_t; 
 
-		expr_t * h_t_lexpr, *h_t_uexpr;
-		/* printf("=====> obtaining hidden...\n"); */
-		/* printf("cell:\n"); */
-		/* expr_print(c_t_lexpr); */
-		/* expr_print(c_t_uexpr); */
-		/* printf("out:\n"); */
-		/* expr_print(o_t_lexpr); */
-		/* expr_print(o_t_uexpr); */
-		if(width1 < width2 || lb_c_t > 0){
-			h_t_lexpr = multiply_expr(pr,c_t_lexpr,lb_o_t,ub_o_t);
-			h_t_uexpr = multiply_expr(pr,c_t_uexpr,lb_o_t,ub_o_t);
-		}
-		else{
-		  // NOTE: This is sound only if lb_c_t < 0
-			h_t_lexpr =  multiply_expr(pr,o_t_lexpr,lb_c_t,ub_c_t);
-			h_t_uexpr =  multiply_expr(pr,o_t_uexpr,lb_c_t,ub_c_t);
-		}
-		/* printf("hidden:\n"); */
-		/* expr_print(h_t_lexpr); */
-		/* expr_print(h_t_uexpr); */
-		/* printf("\n"); */
+		expr_t *h_t_lexpr = copy_expr(c_t_lexpr);
+		expr_t *h_t_uexpr = copy_expr(c_t_uexpr);
+		mul_exprs(pr,h,h_t_lexpr,h_t_uexpr,lb_c_t,ub_c_t,c_t_lexpr,c_t_uexpr,lb_o_t,ub_o_t,o_t_lexpr,o_t_uexpr);
+		/* if(width1 < width2 || lb_c_t > 0){ */
+		/* 	h_t_lexpr = multiply_expr(pr,c_t_lexpr,lb_o_t,ub_o_t); */
+		/* 	h_t_uexpr = multiply_expr(pr,c_t_uexpr,lb_o_t,ub_o_t); */
+		/* } */
+		/* else{ */
+		/*   // NOTE: This is sound only if lb_c_t < 0 */
+		/* 	h_t_lexpr =  multiply_expr(pr,o_t_lexpr,lb_c_t,ub_c_t); */
+		/* 	h_t_uexpr =  multiply_expr(pr,o_t_uexpr,lb_c_t,ub_c_t); */
+		/* } */
+		
 
 		new_h_inf[i] = get_lb_using_previous_layers(man, fp, h_t_lexpr, lstm_index);
 		new_h_sup[i] = get_ub_using_previous_layers(man, fp, h_t_uexpr, lstm_index);
+		/* printf("%.10lf %.10lf\n",new_h_inf[i],new_h_sup[i]); */
 
 		free_expr(f_t_lexpr);
 		free_expr(f_t_uexpr);
@@ -3558,14 +3850,14 @@ void handle_lstm_layer(elina_manager_t *man, elina_abstract0_t *abs, double **we
 	}
 	free_neuron(neuron);
 
-	printf("HIDDEN & CELL:\n");
+	/* printf("HIDDEN & CELL:\n"); */
 	for (i = 0; i < h; i++) { // DEBUG
 	  layer->c_t_inf[i] = new_c_inf[i];
 	  layer->c_t_sup[i] = new_c_sup[i];
 	  layer->h_t_inf[i] = new_h_inf[i];
 	  layer->h_t_sup[i] = new_h_sup[i];
-	  printf("[%d] c_t: [%.10lf, %.10lf]\n", (int)i, new_c_inf[i], new_c_sup[i]);
-	  printf("[%d] h_t: [%.10lf, %.10lf]\n", (int)i, new_h_inf[i], new_h_sup[i]);
+	  /* printf("[%d] c_t: [%.10lf, %.10lf]\n", (int)i, new_c_inf[i], new_c_sup[i]); */
+	  /* printf("[%d] h_t: [%.10lf, %.10lf]\n", (int)i, new_h_inf[i], new_h_sup[i]); */
 	}
 	free(new_c_inf);
 	free(new_c_sup);
