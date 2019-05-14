@@ -3400,17 +3400,17 @@ void dp_multiply(fppoly_internal_t *pr, size_t h, expr_t* res,
 void mul_exprs(fppoly_internal_t *pr, size_t h, expr_t* res_lexpr, expr_t* res_uexpr,
 			   double a_lb, double a_ub, expr_t* a_lexpr, expr_t* a_uexpr,
 			   double b_lb, double b_ub, expr_t* b_lexpr, expr_t* b_uexpr) {
-  bool boxify = false;
+  bool boxify = true;
   if (!boxify && a_lb < 0 && b_lb < 0) {
   	dp_multiply(pr, h, res_lexpr, a_lb, a_ub, a_lexpr, b_lb, b_ub, b_lexpr);
   	dp_multiply(pr, h, res_uexpr, a_lb, a_ub, a_uexpr, b_lb, b_ub, b_uexpr);
-  } else if (false && !boxify && a_ub < 0 && b_lb < 0) {
+  } else if (!boxify && a_ub < 0 && b_lb < 0) {
   	dp_multiply(pr, h, res_lexpr, a_lb, a_ub, a_lexpr, b_lb, b_ub, b_uexpr);
   	dp_multiply(pr, h, res_uexpr, a_lb, a_ub, a_uexpr, b_lb, b_ub, b_lexpr);
-  } else if (false && !boxify && b_ub < 0 && a_lb < 0) {
+  } else if (!boxify && b_ub < 0 && a_lb < 0) {
   	dp_multiply(pr, h, res_lexpr, a_lb, a_ub, a_uexpr, b_lb, b_ub, b_lexpr);
   	dp_multiply(pr, h, res_uexpr, a_lb, a_ub, a_lexpr, b_lb, b_ub, a_uexpr);
-  } else if (false && !boxify && a_ub < 0 && b_ub < 0) {
+  } else if (!boxify && a_ub < 0 && b_ub < 0) {
   	dp_multiply(pr, h, res_lexpr, a_lb, a_ub, a_uexpr, b_lb, b_ub, b_uexpr);
   	dp_multiply(pr, h, res_uexpr, a_lb, a_ub, a_lexpr, b_lb, b_ub, a_lexpr);
   } else {
@@ -3543,21 +3543,42 @@ void mul_sigmoid_tanh_exprs(fppoly_internal_t *pr, size_t h, expr_t* res_lexpr, 
 							double a_lb, double a_ub, expr_t* a_lexpr, expr_t* a_uexpr,
 							double b_lb, double b_ub, expr_t* b_lexpr, expr_t* b_uexpr) {
   double Al, Bl, Cl, Au, Bu, Cu;
+  double delta = 1e-5;
   size_t i;
+  expr_t* tmp_lexpr;
+  expr_t* tmp_uexpr;
   
-  compute_sigmoid_mul_tanh_planes(-a_lb, a_ub, -b_lb, b_ub, &Al, &Bl, &Cl, &Au, &Bu, &Cu);
-  /* printf("%.5lf %.5lf ... %.5lf %.5lf\n",-a_lb,a_ub,-b_lb,b_ub); */
-  /* printf("lower_plane = %.3lf*x + %.3lf*y + %.3lf, upper_plane = %.3lf*x + %.3lf*y + %.3lf\n",Al,Bl,Cl,Au,Bu,Cu); */
+  compute_sigmoid_mul_tanh_planes(-a_lb - delta, a_ub + delta, -b_lb - delta, b_ub + delta, &Al, &Bl, &Cl, &Au, &Bu, &Cu);
+  /* printf("%.10lf %.10lf ... %.10lf %.10lf\n",-a_lb,a_ub,-b_lb,b_ub); */
+  /* printf("lower_plane = %.10lf*x + %.10lf*y + %.10lf, upper_plane = %.10lf*x + %.10lf*y + %.10lf\n",Al,Bl,Cl,Au,Bu,Cu); */
 
-  res_lexpr = multiply_expr(pr, a_lexpr, -Al, Al);
-  expr_t* tmp_lexpr = multiply_expr(pr, b_lexpr, -Bl, Bl);
+  if (Al > 0) {
+	*res_lexpr = *multiply_expr(pr, a_lexpr, -Al, Al);
+  } else {
+	*res_lexpr = *multiply_expr(pr, a_uexpr, -Al, Al);
+  }
+  if (Bl > 0) {
+	tmp_lexpr = multiply_expr(pr, b_lexpr, -Bl, Bl);
+  } else {
+	tmp_lexpr = multiply_expr(pr, b_uexpr, -Bl, Bl);
+  }
   add_expr(pr, res_lexpr, tmp_lexpr);
   elina_double_interval_add_cst_coeff(pr, &res_lexpr->inf_cst, &res_lexpr->sup_cst, -Cl, Cl, res_lexpr->inf_cst, res_lexpr->sup_cst);
 
-  res_uexpr = multiply_expr(pr, a_uexpr, -Au, Au);
-  expr_t* tmp_uexpr = multiply_expr(pr, b_uexpr, -Bu, Bu);
+  if (Au > 0) {
+	*res_uexpr = *multiply_expr(pr, a_uexpr, -Au, Au);
+  } else {
+	*res_uexpr = *multiply_expr(pr, a_lexpr, -Au, Au);
+  }
+  if (Bu > 0) {
+	tmp_uexpr = multiply_expr(pr, b_uexpr, -Bu, Bu);
+  } else {
+	tmp_uexpr = multiply_expr(pr, b_lexpr, -Bu, Bu);
+  }
   add_expr(pr, res_uexpr, tmp_uexpr);
   elina_double_interval_add_cst_coeff(pr, &res_uexpr->inf_cst, &res_uexpr->sup_cst, -Cu, Cu, res_uexpr->inf_cst, res_uexpr->sup_cst);
+  /* printf("-> res_lexpr: "); expr_print(res_lexpr); */
+  /* printf("-> res_uexpr: "); expr_print(res_uexpr); */
 }
 
 
@@ -3570,7 +3591,7 @@ void handle_lstm_layer(elina_manager_t *man, elina_abstract0_t *abs, double **we
 	size_t i;
 	neuron_t * neuron = neuron_alloc();
 	bool first_time_step = (layer->h_t_inf==NULL && layer->h_t_sup==NULL);
-	bool force_boxify = true; //first_time_step;
+	bool force_boxify = false; //first_time_step;
 
 	double* prev_lb = (double*)malloc(h*sizeof(double));
 	double* prev_ub = (double*)malloc(h*sizeof(double));
@@ -3705,50 +3726,26 @@ void handle_lstm_layer(elina_manager_t *man, elina_abstract0_t *abs, double **we
 		neuron->ub = pre_ub_c_t;
 		double lb_c_t = apply_tanh_lexpr(pr,&c_t_lexpr, neuron, force_boxify);
 		double ub_c_t = apply_tanh_uexpr(pr,&c_t_uexpr, neuron, force_boxify);
-		
-		/* printf("multiply cell and input:\n"); */
-		/* printf("cell:\n"); */
-		/* expr_print(c_t_lexpr); */
-		/* expr_print(c_t_uexpr); */
-		/* printf("lb_c_t = %.10lf, ub_c_t = %.10lf\n",lb_c_t,ub_c_t); */
-		/* printf("input:\n"); */
-		/* expr_print(i_t_lexpr); */
-		/* expr_print(i_t_uexpr); */
-		/* printf("lb_i_t = %.10lf, ub_i_t = %.10lf\n",lb_i_t,ub_i_t); */
+
+		// multiply cell and input
+		expr_t* ci_lexpr = copy_expr(c_t_lexpr);
+		expr_t* ci_uexpr = copy_expr(c_t_uexpr);
+		/* mul_exprs(pr, h, ci_lexpr, ci_uexpr, */
+		/* 		  lb_c_t, ub_c_t, c_t_lexpr, c_t_uexpr, */
+		/* 		  lb_i_t, ub_i_t, i_t_lexpr, i_t_uexpr); */
+		/* printf("c_t = %.10lf %.10lf ... i_t = %.10lf %.10lf\n",pre_lb_c_t,pre_ub_c_t,pre_lb_i_t,pre_ub_i_t); */
+		mul_sigmoid_tanh_exprs(pr, h, ci_lexpr, ci_uexpr,
+							   pre_lb_i_t, pre_ub_i_t, pre_i_t_lexpr, pre_i_t_uexpr,
+							   pre_lb_c_t, pre_ub_c_t, pre_c_t_lexpr, pre_c_t_uexpr);
+		c_t_lexpr = ci_lexpr;
+		c_t_uexpr = ci_uexpr;
+		/* printf("ci:\n"); */
+		/* expr_print(ci_lexpr); */
+		/* expr_print(ci_uexpr); */
 		/* printf("\n"); */
-		double width1 = ub_i_t + lb_i_t;
-		double width2 = ub_c_t + lb_c_t;
+		/* printf("lb: %.10lf\n",get_lb_using_previous_layers(man, fp, ci_lexpr, lstm_index)); */
+		/* printf("ub: %.10lf\n",get_ub_using_previous_layers(man, fp, ci_uexpr, lstm_index)); */
 		
-		/* printf("====================================================\n"); */
-		/* if (false && lb_c_t < 0 && lb_i_t < 0) { */
-		/*   /\* printf("lb_c_t = %.10lf, ub_c_t = %.10lf\n",lb_c_t,ub_c_t); *\/ */
-		/*   /\* printf("lb_i_t = %.10lf, ub_i_t = %.10lf\n",lb_i_t,ub_i_t); *\/ */
-		/*   /\* expr_print(c_t_lexpr); *\/ */
-		/*   /\* expr_print(i_t_lexpr); *\/ */
-		/*   expr_t* res_lexpr = copy_expr(c_t_lexpr); */
-		/*   expr_t* res_uexpr = copy_expr(c_t_uexpr); */
-		/*   dp_multiply(pr, h, res_lexpr, lb_c_t, ub_c_t, c_t_lexpr, lb_i_t, ub_i_t, i_t_lexpr, prev_lb, prev_ub); */
-		/*   dp_multiply(pr, h, res_uexpr, lb_c_t, ub_c_t, c_t_uexpr, lb_i_t, ub_i_t, i_t_uexpr, prev_lb, prev_ub); */
-		/*   c_t_lexpr = res_lexpr; */
-		/*   c_t_uexpr = res_uexpr; */
-		/* } else { */
-		/*   if (true) { //width1 < width2 || lb_c_t >= 0){ */
-		/* 	c_t_lexpr = multiply_expr(pr,c_t_lexpr,lb_i_t,ub_i_t); */
-		/* 	c_t_uexpr = multiply_expr(pr,c_t_uexpr,lb_i_t,ub_i_t); */
-		/*   } */
-		/*   else{ */
-		/* 	// NOTE: This is sound only if lb_c_t < 0 */
-		/* 	c_t_lexpr = multiply_expr(pr,i_t_lexpr,lb_c_t,ub_c_t); */
-		/* 	c_t_uexpr = multiply_expr(pr,i_t_uexpr,lb_c_t,ub_c_t); */
-		/*   } */
-		/* } */
-		expr_t* tmp_c_lexpr = copy_expr(c_t_lexpr);
-		expr_t* tmp_c_uexpr = copy_expr(c_t_uexpr);
-		/* printf("mul cell x input:\n"); */
-		mul_exprs(pr,h,tmp_c_lexpr,tmp_c_uexpr,lb_c_t,ub_c_t,c_t_lexpr,c_t_uexpr,lb_i_t,ub_i_t,i_t_lexpr,i_t_uexpr);
-		/* mul_sigmoid_tanh_exprs(pr,h,tmp_c_lexpr,tmp_c_uexpr,lb_c_t,ub_c_t,c_t_lexpr,c_t_uexpr,lb_i_t,ub_i_t,i_t_lexpr,i_t_uexpr); */
-		c_t_lexpr = tmp_c_lexpr;
-		c_t_uexpr = tmp_c_uexpr;
 		
 		if(!first_time_step){
 		  expr_t* tmp_lexpr = copy_expr(f_t_lexpr);
@@ -3818,8 +3815,8 @@ void handle_lstm_layer(elina_manager_t *man, elina_abstract0_t *abs, double **we
 		ub_c_t = apply_tanh_uexpr(pr,&c_t_uexpr, neuron, force_boxify);
 		/* printf("lb_c_t = %.10lf, ub_c_t = %.10lf\n",lb_c_t,ub_c_t); */
 		
-		width1 = ub_o_t + lb_o_t;
-		width2 = ub_c_t + lb_c_t; 
+		double width1 = ub_o_t + lb_o_t;
+		double width2 = ub_c_t + lb_c_t; 
 
 		expr_t *h_t_lexpr = copy_expr(c_t_lexpr);
 		expr_t *h_t_uexpr = copy_expr(c_t_uexpr);
