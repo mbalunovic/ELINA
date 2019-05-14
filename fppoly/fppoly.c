@@ -3430,26 +3430,26 @@ double dmin(double a, double b) { return a < b ? a : b; }
 double dmax(double a, double b) { return a > b ? a : b; }
 double s(double x) { return 1.0 / (1.0 + exp(-x)); }
 double s_(double x) { return exp(-x) / ((1 + exp(-x)) * (1 + exp(-x))); }
-double t(double x) { return tanh(x); }
-double t_(double x) { return 1 - tanh(x) * tanh(x); }
-double f(double x, double y) { return s(x) * t(y); }
-double dxf(double x, double y) { return s_(x) * t(y); }
-double dyf(double x, double y) { return s(x) * t_(y); }
+double t(bool th, double x) { return th ? tanh(x) : x; }
+double t_(bool th, double x) { return th ? 1 - tanh(x) * tanh(x) : 1; }
+double f(bool th, double x, double y) { return s(x) * t(th, y); }
+double dxf(bool th, double x, double y) { return s_(x) * t(th, y); }
+double dyf(bool th, double x, double y) { return s(x) * t_(th, y); }
 void set_plane(double *A, double *B, double *C, double tA, double tB, double tC) { *A = tA; *B = tB; *C = tC; }
 
-void compute_sigmoid_mul_tanh_planes(double lx, double ux, double ly, double uy,
+void compute_sigmoid_mul_tanh_planes(bool th, double lx, double ux, double ly, double uy, 
 									 double* Al, double* Bl, double* Cl,
 									 double* Au, double* Bu, double* Cu) {
   if (ly >= 0) {
-	double x_slope = dmin(dxf(ux, uy), (f(ux, uy) - f(lx, uy)) / (ux - lx));
+	double x_slope = dmin(dxf(th, ux, uy), (f(th, ux, uy) - f(th, lx, uy)) / (ux - lx));
 	double Au1 = x_slope;
 	double Bu1 = 0;
-	double Cu1 = x_slope * (-ux) + f(ux, uy);
+	double Cu1 = x_slope * (-ux) + f(th, ux, uy);
 
-	double y_slope = dmin(dyf(ux, uy), (f(ux, uy) - f(ux, ly)) / (uy - ly));
+	double y_slope = dmin(dyf(th, ux, uy), (f(th, ux, uy) - f(th, ux, ly)) / (uy - ly));
 	double Au2 = 0;
 	double Bu2 = y_slope;
-	double Cu2 = y_slope * (-uy) + f(ux, uy);
+	double Cu2 = y_slope * (-uy) + f(th, ux, uy);
 	
 	if ((ux + lx) * Au1 / 2 + Cu1 < (uy + ly) * Bu2 / 2 + Cu2) {
 	  set_plane(Au, Bu, Cu, Au1, Bu1, Cu1);
@@ -3457,14 +3457,14 @@ void compute_sigmoid_mul_tanh_planes(double lx, double ux, double ly, double uy,
 	  set_plane(Au, Bu, Cu, Au2, Bu2, Cu2);
 	}
 	
-	x_slope = dmin(dxf(lx, ly), (f(lx, ly) - f(ux, ly)) / (lx - ux));
+	x_slope = dmin(dxf(th, lx, ly), (f(th, lx, ly) - f(th, ux, ly)) / (lx - ux));
 	double Al1 = x_slope;
 	double Bl1 = 0;
-	double Cl1 = x_slope * (-lx) + f(lx, ly);
-	y_slope = dmin(dyf(lx, ly), (f(lx, ly) - f(lx, uy)) / (ly - uy));
+	double Cl1 = x_slope * (-lx) + f(th, lx, ly);
+	y_slope = dmin(dyf(th, lx, ly), (f(th, lx, ly) - f(th, lx, uy)) / (ly - uy));
 	double Al2 = 0;
 	double Bl2 = y_slope;
-	double Cl2 = y_slope * (-ly) + f(lx, ly);
+	double Cl2 = y_slope * (-ly) + f(th, lx, ly);
 
 	if ((ux + lx) * Al1 / 2 + Cl1 > (uy + ly) * Bl2 / 2 + Cl2) {
 	  set_plane(Al, Bl, Cl, Al1, Bl1, Cl1);
@@ -3472,15 +3472,15 @@ void compute_sigmoid_mul_tanh_planes(double lx, double ux, double ly, double uy,
 	  set_plane(Al, Bl, Cl, Al2, Bl2, Cl2);
 	}
   } else if (ly <= 0 && 0 <= uy) {
-	double x_slope = dmin(dxf(ux, uy), (f(ux, uy) - f(lx, uy)) / (ux - lx));
+	double x_slope = dmin(dxf(th, ux, uy), (f(th, ux, uy) - f(th, lx, uy)) / (ux - lx));
 	double Au1 = x_slope;
 	double Bu1 = 0;
-	double Cu1 = x_slope * (-ux) + f(ux, uy);
+	double Cu1 = x_slope * (-ux) + f(th, ux, uy);
 
-	double y_slope = dmin(dyf(ux, uy), (f(ux, uy) - f(lx, ly)) / (uy - ly));
+	double y_slope = dmin(dyf(th, ux, uy), (f(th, ux, uy) - f(th, lx, ly)) / (uy - ly));
 	double Au2 = 0;
 	double Bu2 = y_slope;
-	double Cu2 = y_slope * (-uy) + f(ux, uy);
+	double Cu2 = y_slope * (-uy) + f(th, ux, uy);
 
 	if ((ux + lx) * Au1 / 2 + Cu1 < (uy + ly) * Bu2 / 2 + Cu2) {
 	  set_plane(Au, Bu, Cu, Au1, Bu1, Cu1);
@@ -3488,15 +3488,15 @@ void compute_sigmoid_mul_tanh_planes(double lx, double ux, double ly, double uy,
 	  set_plane(Au, Bu, Cu, Au2, Bu2, Cu2);
 	}
 
-	x_slope = dmax(dxf(ux, ly), (f(ux, ly) - f(lx, ly)) / (ux - lx));
+	x_slope = dmax(dxf(th, ux, ly), (f(th, ux, ly) - f(th, lx, ly)) / (ux - lx));
 	double Al1 = x_slope;
 	double Bl1 = 0;
-	double Cl1 = x_slope * (-ux) + f(ux, ly);
+	double Cl1 = x_slope * (-ux) + f(th, ux, ly);
 	
-	y_slope = dmin(dyf(ux, ly), (f(ux, ly) - f(lx, uy)) / (ly - uy));
+	y_slope = dmin(dyf(th, ux, ly), (f(th, ux, ly) - f(th, lx, uy)) / (ly - uy));
 	double Al2 = 0;
 	double Bl2 = y_slope;
-	double Cl2 = y_slope * (-ly) + f(ux, ly);
+	double Cl2 = y_slope * (-ly) + f(th, ux, ly);
 
 	if ((ux + lx) * Al1 / 2 + Cl1 > (uy + ly) * Bl2 / 2 + Cl2) {
 	  set_plane(Al, Bl, Cl, Al1, Bl1, Cl1);
@@ -3504,15 +3504,15 @@ void compute_sigmoid_mul_tanh_planes(double lx, double ux, double ly, double uy,
 	  set_plane(Al, Bl, Cl, Al2, Bl2, Cl2);
 	}
   } else {
-	double x_slope = dmax(dxf(lx, uy), (f(lx, uy) - f(ux, uy)) / (lx - ux));
+	double x_slope = dmax(dxf(th, lx, uy), (f(th, lx, uy) - f(th, ux, uy)) / (lx - ux));
 	double Au1 = x_slope;
 	double Bu1 = 0;
-	double Cu1 = x_slope * (-lx) + f(lx, uy);
+	double Cu1 = x_slope * (-lx) + f(th, lx, uy);
 
-	double y_slope = dmin(dyf(lx, uy), (f(lx, uy) - f(lx, ly)) / (uy - ly));
+	double y_slope = dmin(dyf(th, lx, uy), (f(th, lx, uy) - f(th, lx, ly)) / (uy - ly));
 	double Au2 = 0;
 	double Bu2 = y_slope;
-	double Cu2 = y_slope * (-uy) + f(lx, uy);
+	double Cu2 = y_slope * (-uy) + f(th, lx, uy);
 	
 	if ((ux + lx) * Au1 / 2 + Cu1 < (uy + ly) * Bu2 / 2 + Cu2) {
 	  set_plane(Au, Bu, Cu, Au1, Bu1, Cu1);
@@ -3520,15 +3520,15 @@ void compute_sigmoid_mul_tanh_planes(double lx, double ux, double ly, double uy,
 	  set_plane(Au, Bu, Cu, Au2, Bu2, Cu2);
 	}
 	
-	x_slope = dmax(dxf(ux, ly), (f(ux, ly) - f(lx, ly)) / (ux - lx));
+	x_slope = dmax(dxf(th, ux, ly), (f(th, ux, ly) - f(th, lx, ly)) / (ux - lx));
 	double Al1 = x_slope;
 	double Bl1 = 0;
-	double Cl1 = x_slope * (-ux) + f(ux, ly);
+	double Cl1 = x_slope * (-ux) + f(th, ux, ly);
 	
-	y_slope = dmin(dyf(ux, ly), (f(ux, ly) - f(ux, uy)) / (ly - uy));
+	y_slope = dmin(dyf(th, ux, ly), (f(th, ux, ly) - f(th, ux, uy)) / (ly - uy));
 	double Al2 = 0;
 	double Bl2 = y_slope;
-	double Cl2 = y_slope * (-ly) + f(ux, ly);
+	double Cl2 = y_slope * (-ly) + f(th, ux, ly);
 
 	if ((ux + lx) * Al1 / 2 + Cl1 > (uy + ly) * Bl2 / 2 + Cl2) {
 	  set_plane(Al, Bl, Cl, Al1, Bl1, Cl1);
@@ -3539,7 +3539,7 @@ void compute_sigmoid_mul_tanh_planes(double lx, double ux, double ly, double uy,
 }
 
 // computes sigmoid(a) * tanh(b)
-void mul_sigmoid_tanh_exprs(fppoly_internal_t *pr, size_t h, expr_t* res_lexpr, expr_t* res_uexpr,
+void mul_sigmoid_tanh_exprs(bool th, fppoly_internal_t *pr, size_t h, expr_t* res_lexpr, expr_t* res_uexpr,
 							double a_lb, double a_ub, expr_t* a_lexpr, expr_t* a_uexpr,
 							double b_lb, double b_ub, expr_t* b_lexpr, expr_t* b_uexpr) {
   double Al, Bl, Cl, Au, Bu, Cu;
@@ -3548,7 +3548,7 @@ void mul_sigmoid_tanh_exprs(fppoly_internal_t *pr, size_t h, expr_t* res_lexpr, 
   expr_t* tmp_lexpr;
   expr_t* tmp_uexpr;
   
-  compute_sigmoid_mul_tanh_planes(-a_lb - delta, a_ub + delta, -b_lb - delta, b_ub + delta, &Al, &Bl, &Cl, &Au, &Bu, &Cu);
+  compute_sigmoid_mul_tanh_planes(th, -a_lb - delta, a_ub + delta, -b_lb - delta, b_ub + delta, &Al, &Bl, &Cl, &Au, &Bu, &Cu);
   /* printf("%.10lf %.10lf ... %.10lf %.10lf\n",-a_lb,a_ub,-b_lb,b_ub); */
   /* printf("lower_plane = %.10lf*x + %.10lf*y + %.10lf, upper_plane = %.10lf*x + %.10lf*y + %.10lf\n",Al,Bl,Cl,Au,Bu,Cu); */
 
@@ -3734,107 +3734,126 @@ void handle_lstm_layer(elina_manager_t *man, elina_abstract0_t *abs, double **we
 		/* 		  lb_c_t, ub_c_t, c_t_lexpr, c_t_uexpr, */
 		/* 		  lb_i_t, ub_i_t, i_t_lexpr, i_t_uexpr); */
 		/* printf("c_t = %.10lf %.10lf ... i_t = %.10lf %.10lf\n",pre_lb_c_t,pre_ub_c_t,pre_lb_i_t,pre_ub_i_t); */
-		mul_sigmoid_tanh_exprs(pr, h, ci_lexpr, ci_uexpr,
+		mul_sigmoid_tanh_exprs(true, pr, h, ci_lexpr, ci_uexpr,
 							   pre_lb_i_t, pre_ub_i_t, pre_i_t_lexpr, pre_i_t_uexpr,
 							   pre_lb_c_t, pre_ub_c_t, pre_c_t_lexpr, pre_c_t_uexpr);
 		c_t_lexpr = ci_lexpr;
 		c_t_uexpr = ci_uexpr;
-		/* printf("ci:\n"); */
-		/* expr_print(ci_lexpr); */
-		/* expr_print(ci_uexpr); */
-		/* printf("\n"); */
-		/* printf("lb: %.10lf\n",get_lb_using_previous_layers(man, fp, ci_lexpr, lstm_index)); */
-		/* printf("ub: %.10lf\n",get_ub_using_previous_layers(man, fp, ci_uexpr, lstm_index)); */
-		
-		
-		if(!first_time_step){
-		  expr_t* tmp_lexpr = copy_expr(f_t_lexpr);
-		  expr_t* tmp_uexpr = copy_expr(f_t_uexpr);
-		  expr_t* prev_c_lexpr = copy_expr(c_t_lexpr);
-		  expr_t* prev_c_uexpr = copy_expr(c_t_uexpr);
 
-		  size_t j;
-		  for (j = 0; j < h; ++j) {
-			prev_c_lexpr->inf_coeff[j] = prev_c_uexpr->inf_coeff[j] = 0;
-			prev_c_lexpr->sup_coeff[j] = prev_c_uexpr->sup_coeff[j] = 0;
-		  }
-		  prev_c_lexpr->inf_cst = prev_c_uexpr->inf_cst = layer->c_t_inf[i];
-		  prev_c_lexpr->sup_cst = prev_c_uexpr->sup_cst = layer->c_t_sup[i];
-		  mul_exprs(pr,h,tmp_lexpr,tmp_uexpr,
-					lb_f_t,ub_f_t,f_t_lexpr,f_t_uexpr,
-					layer->c_t_inf[i],layer->c_t_sup[i],prev_c_lexpr,prev_c_uexpr);
-		  add_expr(pr,c_t_lexpr,tmp_lexpr);
-		  add_expr(pr,c_t_uexpr,tmp_uexpr);
-		  
-		  /* if (layer->c_t_inf[i] > 0 && layer->c_t_sup[i] > 0) { */
-		  /* 	double tmp_l, tmp_u; */
-		  /* 	elina_double_interval_mul_expr_coeff(pr, &tmp_l, &tmp_u, lb_f_t, ub_f_t, layer->c_t_inf[i], layer->c_t_sup[i]); */
-		  /* 	c_t_lexpr->inf_cst += tmp_l; */
-		  /* 	c_t_uexpr->sup_cst += tmp_u; */
-		  /* } else { */
-		  /* 	expr_t *tmp_l, *tmp_u; */
-		  /* 	if (layer->c_t_inf[i] < 0) { */
-		  /* 	  tmp_l = multiply_expr(pr,f_t_lexpr,layer->c_t_inf[i],layer->c_t_sup[i]); */
-		  /* 	  tmp_u = multiply_expr(pr,f_t_uexpr,layer->c_t_inf[i],layer->c_t_sup[i]); */
-		  /* 	} else { */
-		  /* 	  tmp_l = multiply_expr(pr,f_t_uexpr,layer->c_t_inf[i],layer->c_t_sup[i]); */
-		  /* 	  tmp_u = multiply_expr(pr,f_t_lexpr,layer->c_t_inf[i],layer->c_t_sup[i]); */
-		  /* 	} */
-		  /* 	/\* printf("adding control to prev\n"); *\/ */
-		  /* 	/\* expr_print(c_t_lexpr); *\/ */
-		  /* 	/\* expr_print(tmp_l); *\/ */
-		  /* 	/\* printf("...\n"); *\/ */
-		  /* 	add_expr(pr,c_t_lexpr,tmp_l); */
-		  /* 	add_expr(pr,c_t_uexpr,tmp_u); */
-		  /* 	free_expr(tmp_l); */
-		  /* 	free_expr(tmp_u); */
-		  /* } */
-		}
-
-		tmp_c_t_lexpr = copy_expr(c_t_lexpr);
-		tmp_c_t_uexpr = copy_expr(c_t_uexpr);
-
-		lb_c_t = get_lb_using_previous_layers(man, fp, tmp_c_t_lexpr, lstm_index);
-		ub_c_t = get_ub_using_previous_layers(man, fp, tmp_c_t_uexpr, lstm_index);
-		/* printf("lb_c_t = %.10lf, ub_c_t = %.10lf\n",lb_c_t,ub_c_t); */
-		/* printf("====================================================\n"); */
-		free_expr(tmp_c_t_lexpr);
-		free_expr(tmp_c_t_uexpr);
-
-		/* printf("c_t:\n"); */
 		/* expr_print(c_t_lexpr); */
 		/* expr_print(c_t_uexpr); */
-		/* printf("lb_c_t = %.10lf, ub_c_t = %.10lf\n",lb_c_t,ub_c_t); */
-		/* printf("\n"); */
 
+		if (!first_time_step) {
+		  expr_t* tmp_l = copy_expr(f_t_lexpr);
+		  expr_t* tmp_u = copy_expr(f_t_uexpr);
+		  expr_t* box_l;
+		  expr_t* box_u;
+		  double tmp1, tmp2;
+		  
+		  // pure intervals
+		  /* tmp_l = multiply_expr(pr,f_t_lexpr,0,0); */
+		  /* tmp_u = multiply_expr(pr,f_t_uexpr,0,0); */
+		  /* elina_double_interval_mul_expr_coeff(pr,&tmp1,&tmp2,lb_f_t,ub_f_t,layer->c_t_inf[i],layer->c_t_sup[i]); */
+		  /* tmp_l->inf_cst += tmp1; */
+		  /* tmp_l->sup_cst += tmp2; */
+		  /* tmp_u->inf_cst += tmp1; */
+		  /* tmp_u->sup_cst += tmp2; */
+
+		  /* add_expr(pr,c_t_lexpr,tmp_l); */
+		  /* add_expr(pr,c_t_uexpr,tmp_u); */
+		  /* free_expr(tmp_l); */
+		  /* free_expr(tmp_u); */
+
+		  // sigmoid bounds
+		  expr_t* prev_c_lexpr = multiply_expr(pr, f_t_lexpr, 0, 0);
+		  expr_t* prev_c_uexpr = multiply_expr(pr, f_t_uexpr, 0, 0);
+		  prev_c_lexpr->inf_cst += layer->c_t_inf[i];
+		  prev_c_lexpr->sup_cst += layer->c_t_sup[i];
+		  prev_c_uexpr->inf_cst += layer->c_t_inf[i];
+		  prev_c_uexpr->sup_cst += layer->c_t_sup[i];
+		  mul_sigmoid_tanh_exprs(false, pr, h, tmp_l, tmp_u,
+		  						 pre_lb_f_t, pre_ub_f_t, pre_f_t_lexpr, pre_f_t_uexpr,
+		  						 layer->c_t_inf[i], layer->c_t_sup[i], prev_c_lexpr, prev_c_uexpr);
+			
+		  double tmp_lb = get_lb_using_previous_layers(man, fp, tmp_l, lstm_index);
+		  double tmp_ub = get_lb_using_previous_layers(man, fp, tmp_u, lstm_index);
+		  
+		  box_l = multiply_expr(pr, f_t_lexpr, 0, 0);
+		  box_u = multiply_expr(pr, f_t_uexpr, 0, 0);
+		  elina_double_interval_mul_expr_coeff(pr, &tmp1, &tmp2, lb_f_t, ub_f_t, layer->c_t_inf[i], layer->c_t_sup[i]);
+		  box_l->inf_cst += tmp1;
+		  box_l->sup_cst += tmp2;
+		  box_u->inf_cst += tmp1;
+		  box_u->sup_cst += tmp2;
+		  
+		  /* printf("tmp_lb = %.10lf, tmp_ub = %.10lf\n",tmp_lb,tmp_ub); */
+		  /* printf("box_lb = %.10lf, box_ub = %.10lf\n",-box_l->inf_cst,box_u->sup_cst); */
+		  
+		  add_expr(pr, c_t_lexpr, tmp_l);
+		  add_expr(pr, c_t_uexpr, tmp_u);
+		  free_expr(tmp_l);
+		  free_expr(tmp_u);
+		  free_expr(box_l);
+		  free_expr(box_u);
+		}
+		
+		/* if(!first_time_step){ */
+		/*   expr_t* tmp_lexpr = copy_expr(f_t_lexpr); */
+		/*   expr_t* tmp_uexpr = copy_expr(f_t_uexpr); */
+		/*   /\* expr_t* prev_c_lexpr = copy_expr(c_t_lexpr); *\/ */
+		/*   /\* expr_t* prev_c_uexpr = copy_expr(c_t_uexpr); *\/ */
+		/*   /\* size_t j; *\/ */
+		/*   /\* for (j = 0; j < h; ++j) { *\/ */
+		/*   /\* 	prev_c_lexpr->inf_coeff[j] = prev_c_uexpr->inf_coeff[j] = 0; *\/ */
+		/*   /\* 	prev_c_lexpr->sup_coeff[j] = prev_c_uexpr->sup_coeff[j] = 0; *\/ */
+		/*   /\* } *\/ */
+		/*   /\* prev_c_lexpr->inf_cst = prev_c_uexpr->inf_cst = layer->c_t_inf[i]; *\/ */
+		/*   /\* prev_c_lexpr->sup_cst = prev_c_uexpr->sup_cst = layer->c_t_sup[i]; *\/ */
+		/*   /\* mul_exprs(pr,h,tmp_lexpr,tmp_uexpr, *\/ */
+		/*   /\* 			lb_f_t,ub_f_t,f_t_lexpr,f_t_uexpr, *\/ */
+		/*   /\* 			layer->c_t_inf[i],layer->c_t_sup[i],prev_c_lexpr,prev_c_uexpr); *\/ */
+
+		/*   if (layer->c_t_inf[i] < 0) { */
+			
+		/*   } else if (layer->c_t_sup[i] < 0) { */
+			
+		/*   } else { */
+		/* 	printf("have to boxify...\n"); */
+		/*   } */
+		  
+		/*   printf("====================\n"); */
+		/*   expr_print(c_t_lexpr); */
+		/*   expr_print(tmp_lexpr); */
+		/*   printf("====================\n"); */
+		/*   add_expr(pr,c_t_lexpr,tmp_lexpr); */
+		/*   add_expr(pr,c_t_uexpr,tmp_uexpr); */
+		/* } */
+
+		pre_c_t_lexpr = copy_expr(c_t_lexpr);
+		pre_c_t_uexpr = copy_expr(c_t_uexpr);
+		tmp_c_t_lexpr = copy_expr(c_t_lexpr);
+		tmp_c_t_uexpr = copy_expr(c_t_uexpr);
+		lb_c_t = get_lb_using_previous_layers(man, fp, tmp_c_t_lexpr, lstm_index);
+		ub_c_t = get_ub_using_previous_layers(man, fp, tmp_c_t_uexpr, lstm_index);
+		free_expr(tmp_c_t_lexpr);
+		free_expr(tmp_c_t_uexpr);
+		
 		new_c_inf[i] = lb_c_t;
 		new_c_sup[i] = ub_c_t;
 		neuron->lb = lb_c_t;
 		neuron->ub = ub_c_t;
 		lb_c_t = apply_tanh_lexpr(pr,&c_t_lexpr, neuron, force_boxify);
 		ub_c_t = apply_tanh_uexpr(pr,&c_t_uexpr, neuron, force_boxify);
-		/* printf("lb_c_t = %.10lf, ub_c_t = %.10lf\n",lb_c_t,ub_c_t); */
 		
-		double width1 = ub_o_t + lb_o_t;
-		double width2 = ub_c_t + lb_c_t; 
-
 		expr_t *h_t_lexpr = copy_expr(c_t_lexpr);
 		expr_t *h_t_uexpr = copy_expr(c_t_uexpr);
-		mul_exprs(pr,h,h_t_lexpr,h_t_uexpr,lb_c_t,ub_c_t,c_t_lexpr,c_t_uexpr,lb_o_t,ub_o_t,o_t_lexpr,o_t_uexpr);
-		/* if(width1 < width2 || lb_c_t > 0){ */
-		/* 	h_t_lexpr = multiply_expr(pr,c_t_lexpr,lb_o_t,ub_o_t); */
-		/* 	h_t_uexpr = multiply_expr(pr,c_t_uexpr,lb_o_t,ub_o_t); */
-		/* } */
-		/* else{ */
-		/*   // NOTE: This is sound only if lb_c_t < 0 */
-		/* 	h_t_lexpr =  multiply_expr(pr,o_t_lexpr,lb_c_t,ub_c_t); */
-		/* 	h_t_uexpr =  multiply_expr(pr,o_t_uexpr,lb_c_t,ub_c_t); */
-		/* } */
-		
-
+		/* mul_exprs(pr,h,h_t_lexpr,h_t_uexpr,lb_c_t,ub_c_t,c_t_lexpr,c_t_uexpr,lb_o_t,ub_o_t,o_t_lexpr,o_t_uexpr); */
+		mul_sigmoid_tanh_exprs(true, pr, h, h_t_lexpr, h_t_uexpr,
+							   pre_lb_o_t, pre_ub_o_t, pre_o_t_lexpr, pre_o_t_uexpr,
+							   new_c_inf[i], new_c_sup[i], pre_c_t_lexpr, pre_c_t_uexpr);
+		  
 		new_h_inf[i] = get_lb_using_previous_layers(man, fp, h_t_lexpr, lstm_index);
 		new_h_sup[i] = get_ub_using_previous_layers(man, fp, h_t_uexpr, lstm_index);
-		/* printf("%.10lf %.10lf\n",new_h_inf[i],new_h_sup[i]); */
 
 		free_expr(f_t_lexpr);
 		free_expr(f_t_uexpr);
