@@ -42,7 +42,6 @@ extern "C" {
 //#include <sys/sysinfo.h>
 #include "elina_generic.h"
 #include "elina_box_meetjoin.h"
-#include "lstm.h"
 
 
 typedef struct fppoly_internal_t{
