@@ -91,7 +91,7 @@ elina_manager_t * fppoly_manager_alloc(void){
 
 void expr_fprint(FILE * stream, expr_t *expr){
 	if((expr->inf_coeff==NULL) || (expr->sup_coeff==NULL)){
-		fprintf(stdout,"+ [%.10lf, %.10lf]\n",-expr->inf_cst,expr->sup_cst);
+		fprintf(stdout,"+ [%.20lf, %.20lf]\n",-expr->inf_cst,expr->sup_cst);
 		return;
 	}
 	size_t size = expr->size;
@@ -99,24 +99,24 @@ void expr_fprint(FILE * stream, expr_t *expr){
 	for(i=0; i < size; i++){
 		if(i==0){
 			if(expr->type==DENSE){
-				fprintf(stream, "[%.10lf, %.10lf]x0 ", -expr->inf_coeff[0],expr->sup_coeff[0]);
+				fprintf(stream, "[%.20lf, %.20lf]x0 ", -expr->inf_coeff[0],expr->sup_coeff[0]);
 			}
 			else{
-				fprintf(stream, "[%.10lf, %.10lf]x%zu ", -expr->inf_coeff[0],expr->sup_coeff[0],expr->dim[0]);
+				fprintf(stream, "[%.20lf, %.20lf]x%zu ", -expr->inf_coeff[0],expr->sup_coeff[0],expr->dim[0]);
 			}
 		}
 		
 		else{
 			if(expr->type==DENSE){
-				fprintf(stream,"+ [%.10lf, %.10lf]x%zu ",-expr->inf_coeff[i],expr->sup_coeff[i],i);
+				fprintf(stream,"+ [%.20lf, %.20lf]x%zu ",-expr->inf_coeff[i],expr->sup_coeff[i],i);
 			}
 			else{
-				fprintf(stream,"+ [%.10lf, %.10lf]x%zu ",-expr->inf_coeff[i],expr->sup_coeff[i],expr->dim[i]);
+				fprintf(stream,"+ [%.20lf, %.20lf]x%zu ",-expr->inf_coeff[i],expr->sup_coeff[i],expr->dim[i]);
 			}
 		}
 	}
 	
-	fprintf(stdout,"+ [%.10lf, %.10lf]\n",-expr->inf_cst,expr->sup_cst);
+	fprintf(stdout,"+ [%.20lf, %.20lf]\n",-expr->inf_cst,expr->sup_cst);
 	
 }
 
@@ -1105,6 +1105,16 @@ expr_t * lexpr_replace_parabola_bounds(fppoly_internal_t * pr, expr_t * expr, ne
 		/* printf("sqr_inf = %lf, sqr_sup = %lf\n",sqr_inf,sqr_sup); */
 		
                 //= (u_plus_l)*(u_plus_l)
+		if (ub + lb < 1e-4) {
+		  res->inf_coeff[i] = 0.0;
+		  res->sup_coeff[i] = 0.0;
+		  double tmp1, tmp2;
+		  elina_double_interval_mul(&tmp1,&tmp2,expr->inf_coeff[i], expr->sup_coeff[i], sqr_inf, sqr_sup);
+		  res->inf_cst = res->inf_cst + tmp1;
+		  res->sup_cst = res->sup_cst + tmp2;
+		  continue;
+		}
+
 		if(expr->sup_coeff[i]<0){
 			double lu_sup;
             double lu_inf;
@@ -1186,6 +1196,15 @@ expr_t * uexpr_replace_parabola_bounds(fppoly_internal_t *pr, expr_t * expr, neu
 
 		double sqr_inf, sqr_sup;
 		compute_square(lb, ub, &sqr_inf, &sqr_sup);
+		if (ub + lb < 1e-4) {
+		  res->inf_coeff[i] = 0.0;
+		  res->sup_coeff[i] = 0.0;
+		  double tmp1, tmp2;
+		  elina_double_interval_mul(&tmp1,&tmp2,expr->inf_coeff[i], expr->sup_coeff[i], sqr_inf, sqr_sup);
+		  res->inf_cst = res->inf_cst + tmp1;
+		  res->sup_cst = res->sup_cst + tmp2;
+		  continue;
+		}
 		
 		if(expr->inf_coeff[i]<0){
 		  double lu_sup;
@@ -1258,7 +1277,11 @@ expr_t * lexpr_replace_log_bounds(fppoly_internal_t * pr, expr_t * expr, neuron_
 		double ub = neurons[k]->ub;
 
 		if (-lb < 0) {
-		  printf("LOG input may be negative!!!!\n");
+		  /* printf("negative value at log!!!\n"); */
+		  res->inf_coeff[i] = 0.0;
+		  res->sup_coeff[i] = 0.0;
+		  res->inf_cst = INFINITY;
+		  res->sup_cst = INFINITY;
 		}
 
 		res->inf_coeff[i] = 0.0;
@@ -1268,6 +1291,21 @@ expr_t * lexpr_replace_log_bounds(fppoly_internal_t * pr, expr_t * expr, neuron_
 		}
 		double u_plus_l_inf = -(lb+ub);
 		double u_plus_l_sup = -u_plus_l_inf;
+		double u_minus_l_sup = ub +lb;
+		double u_minus_l_inf = -(ub+lb);
+		
+		if (ub + lb < 1e-4) {
+		  double tmp1, tmp2;
+		  double log_lb = -log(-lb), log_ub = log(-lb);
+		  if (log_lb > 0) {
+			log_lb = -log_lb;
+			log_ub = -log_ub;
+		  }
+		  elina_double_interval_mul(&tmp1, &tmp2, expr->inf_coeff[i], expr->sup_coeff[i], -log(-lb), log(-lb));
+		  res->inf_cst = res->inf_cst + tmp1 + pr->min_denormal;
+		  res->sup_cst = res->sup_cst + tmp2 + pr->min_denormal;
+		  continue;
+		}
 		
 		//= (u_plus_l)*(u_plus_l)
 		if(expr->sup_coeff[i]<0){
@@ -1292,47 +1330,32 @@ expr_t * lexpr_replace_log_bounds(fppoly_internal_t * pr, expr_t * expr, neuron_
 			res->sup_cst = res->sup_cst + tmp2 + pr->min_denormal;
 		}
 		else if (expr->inf_coeff[i]<0){
-			double u_minus_l_sup = ub +lb;
-			double u_minus_l_inf = -(ub+lb);
+		  double inv_u_by_l_sup = -1/u_minus_l_inf;
+		  double inv_u_by_l_inf = -1/u_minus_l_sup;
 
-			if (u_minus_l_sup < 1e-9) {
-			  double tmp1, tmp2;
-			  double log_lb = -log(-lb), log_ub = log(-lb);
-			  if (log_lb > 0) {
-				log_lb = -log_lb;
-				log_ub = -log_ub;
-			  }
-			  elina_double_interval_mul(&tmp1, &tmp2, expr->inf_coeff[i], expr->sup_coeff[i], -log(-lb), log(-lb));
-			  res->inf_cst = res->inf_cst + tmp1 + pr->min_denormal;
-			  res->sup_cst = res->sup_cst + tmp2 + pr->min_denormal;
-			} else {
-			  double inv_u_by_l_sup = -1/u_minus_l_inf;
-			  double inv_u_by_l_inf = -1/u_minus_l_sup;
+		  double u_by_l_sup = -ub/lb;
+		  double u_by_l_inf = ub/lb;
 
-			  double u_by_l_sup = -ub/lb;
-			  double u_by_l_inf = ub/lb;
+		  fesetround(FE_DOWNWARD);			
+		  double log_u_by_l_inf = -log(-u_by_l_inf);
+		  double log_l_inf = -log(-lb);
 
-			  fesetround(FE_DOWNWARD);			
-			  double log_u_by_l_inf = -log(-u_by_l_inf);
-			  double log_l_inf = -log(-lb);
+		  fesetround(FE_UPWARD);
+		  double log_u_by_l_sup = log(u_by_l_sup);
+		  double log_l_sup = log(-lb);
 
-			  fesetround(FE_UPWARD);
-			  double log_u_by_l_sup = log(u_by_l_sup);
-			  double log_l_sup = log(-lb);
+		  double lambda_inf, lambda_sup;
+		  elina_double_interval_mul_cst_coeff(pr,&lambda_inf,&lambda_sup,log_u_by_l_inf,log_u_by_l_sup,inv_u_by_l_inf,inv_u_by_l_sup);
+		  elina_double_interval_mul_expr_coeff(pr,&res->inf_coeff[i],&res->sup_coeff[i],lambda_inf,lambda_sup,expr->inf_coeff[i],expr->sup_coeff[i]);
 
-			  double lambda_inf, lambda_sup;
-			  elina_double_interval_mul_cst_coeff(pr,&lambda_inf,&lambda_sup,log_u_by_l_inf,log_u_by_l_sup,inv_u_by_l_inf,inv_u_by_l_sup);
-			  elina_double_interval_mul_expr_coeff(pr,&res->inf_coeff[i],&res->sup_coeff[i],lambda_inf,lambda_sup,expr->inf_coeff[i],expr->sup_coeff[i]);
+		  double mu_inf, mu_sup;
+		  elina_double_interval_mul_cst_coeff(pr,&mu_inf,&mu_sup,-lb,lb,lambda_inf,lambda_sup);
+		  elina_double_interval_add_cst_coeff(pr,&mu_inf,&mu_sup,log_l_inf, log_l_sup, mu_inf, mu_sup);
 
-			  double mu_inf, mu_sup;
-			  elina_double_interval_mul_cst_coeff(pr,&mu_inf,&mu_sup,-lb,lb,lambda_inf,lambda_sup);
-			  elina_double_interval_add_cst_coeff(pr,&mu_inf,&mu_sup,log_l_inf, log_l_sup, mu_inf, mu_sup);
-
-			  double tmp1, tmp2;
-			  elina_double_interval_mul_cst_coeff(pr,&tmp1,&tmp2,mu_inf,mu_sup,expr->inf_coeff[i],expr->sup_coeff[i]);
-			  res->inf_cst = res->inf_cst + tmp1 + pr->min_denormal;
-			  res->sup_cst = res->sup_cst + tmp2 + pr->min_denormal;
-			}
+		  double tmp1, tmp2;
+		  elina_double_interval_mul_cst_coeff(pr,&tmp1,&tmp2,mu_inf,mu_sup,expr->inf_coeff[i],expr->sup_coeff[i]);
+		  res->inf_cst = res->inf_cst + tmp1 + pr->min_denormal;
+		  res->sup_cst = res->sup_cst + tmp2 + pr->min_denormal;
 		}
 		else{
 			res->inf_coeff[i] = 0.0;
@@ -1384,7 +1407,23 @@ expr_t * uexpr_replace_log_bounds(fppoly_internal_t *pr, expr_t * expr, neuron_t
 		double u_plus_l_sup = -u_plus_l_inf;
 
 		if (-lb < 0) {
-		  printf("LOG input may be negative, got lb = %.10lf, ub = %.10lf!!!!\n", lb, ub);
+		  /* printf("negative value at log!!!\n"); */
+		  res->inf_coeff[i] = 0.0;
+		  res->sup_coeff[i] = 0.0;
+		  res->inf_cst = INFINITY;
+		  res->sup_cst = INFINITY;
+		}
+		if (ub + lb < 1e-4) {
+		  double tmp1, tmp2;
+		  double log_lb = -log(-lb), log_ub = log(-lb);
+		  if (log_lb > 0) {
+			log_lb = -log_lb;
+			log_ub = -log_ub;
+		  }
+		  elina_double_interval_mul(&tmp1, &tmp2, expr->inf_coeff[i], expr->sup_coeff[i], -log(-lb), log(-lb));
+		  res->inf_cst = res->inf_cst + tmp1 + pr->min_denormal;
+		  res->sup_cst = res->sup_cst + tmp2 + pr->min_denormal;
+		  continue;
 		}
 		
 		//= (u_plus_l)*(u_plus_l)
@@ -1413,44 +1452,32 @@ expr_t * uexpr_replace_log_bounds(fppoly_internal_t *pr, expr_t * expr, neuron_t
 			double u_minus_l_sup = ub +lb;
 			double u_minus_l_inf = -(ub+lb);
 
-			if (u_minus_l_sup < 1e-9) {
-			  double tmp1, tmp2;
-			  double log_lb = -log(-lb), log_ub = log(-lb);
-			  if (log_lb > 0) {
-				log_lb = -log_lb;
-				log_ub = -log_ub;
-			  }
-			  elina_double_interval_mul(&tmp1, &tmp2, expr->inf_coeff[i], expr->sup_coeff[i], -log(-lb), log(-lb));
-			  res->inf_cst = res->inf_cst + tmp1 + pr->min_denormal;
-			  res->sup_cst = res->sup_cst + tmp2 + pr->min_denormal;
-			} else {
-			  double inv_u_by_l_sup = -1/u_minus_l_inf;
-			  double inv_u_by_l_inf = -1/u_minus_l_sup;
+			double inv_u_by_l_sup = -1/u_minus_l_inf;
+			double inv_u_by_l_inf = -1/u_minus_l_sup;
 
-			  double u_by_l_sup = -ub/lb;
-			  double u_by_l_inf = ub/lb;
+			double u_by_l_sup = -ub/lb;
+			double u_by_l_inf = ub/lb;
 
-			  fesetround(FE_DOWNWARD);
-			  double log_u_by_l_inf = -log(-u_by_l_inf);
-			  double log_l_inf = -log(-lb);
+			fesetround(FE_DOWNWARD);
+			double log_u_by_l_inf = -log(-u_by_l_inf);
+			double log_l_inf = -log(-lb);
+			
+			fesetround(FE_UPWARD);
+			double log_u_by_l_sup = log(u_by_l_sup);
+			double log_l_sup = log(-lb);
 
-			  fesetround(FE_UPWARD);
-			  double log_u_by_l_sup = log(u_by_l_sup);
-			  double log_l_sup = log(-lb);
+			double lambda_inf, lambda_sup;
+			elina_double_interval_mul_cst_coeff(pr,&lambda_inf,&lambda_sup,log_u_by_l_inf,log_u_by_l_sup,inv_u_by_l_inf,inv_u_by_l_sup);
+			elina_double_interval_mul_expr_coeff(pr,&res->inf_coeff[i],&res->sup_coeff[i],lambda_inf,lambda_sup,expr->inf_coeff[i],expr->sup_coeff[i]);
 
-			  double lambda_inf, lambda_sup;
-			  elina_double_interval_mul_cst_coeff(pr,&lambda_inf,&lambda_sup,log_u_by_l_inf,log_u_by_l_sup,inv_u_by_l_inf,inv_u_by_l_sup);
-			  elina_double_interval_mul_expr_coeff(pr,&res->inf_coeff[i],&res->sup_coeff[i],lambda_inf,lambda_sup,expr->inf_coeff[i],expr->sup_coeff[i]);
+			double mu_inf, mu_sup;
+			elina_double_interval_mul_cst_coeff(pr,&mu_inf,&mu_sup,-lb,lb,lambda_inf,lambda_sup);
+			elina_double_interval_add_cst_coeff(pr,&mu_inf,&mu_sup,log_l_inf, log_l_sup, mu_inf, mu_sup);
 
-			  double mu_inf, mu_sup;
-			  elina_double_interval_mul_cst_coeff(pr,&mu_inf,&mu_sup,-lb,lb,lambda_inf,lambda_sup);
-			  elina_double_interval_add_cst_coeff(pr,&mu_inf,&mu_sup,log_l_inf, log_l_sup, mu_inf, mu_sup);
-
-			  double tmp1, tmp2;
-			  elina_double_interval_mul_cst_coeff(pr,&tmp1,&tmp2,mu_inf,mu_sup,expr->inf_coeff[i],expr->sup_coeff[i]);
-			  res->inf_cst = res->inf_cst + tmp1 + pr->min_denormal;
-			  res->sup_cst = res->sup_cst + tmp2 + pr->min_denormal;
-			}
+			double tmp1, tmp2;
+			elina_double_interval_mul_cst_coeff(pr,&tmp1,&tmp2,mu_inf,mu_sup,expr->inf_coeff[i],expr->sup_coeff[i]);
+			res->inf_cst = res->inf_cst + tmp1 + pr->min_denormal;
+			res->sup_cst = res->sup_cst + tmp2 + pr->min_denormal;
 		}
 		else{
   		    res->inf_coeff[i] = 0.0;
@@ -1496,6 +1523,7 @@ expr_t * lexpr_replace_relu_bounds(fppoly_internal_t * pr, expr_t * expr, neuron
 		neuron_t *neuron_k = neurons[k];
 		double lb = neurons[k]->lb;
 		double ub = neurons[k]->ub;
+
 		double width = ub + lb;
 		double lambda_inf = -ub/width;
 		double lambda_sup = ub/width;
@@ -3194,6 +3222,10 @@ double get_lb_using_previous_layers(elina_manager_t *man, fppoly_t *fp, expr_t *
 			/*   best_res = lb_inf; */
 			/* } */
 
+
+			/* printf("%d, activation = %d\n",(int)k, (int)fp->layers[k]->activation); */
+			/* expr_print(lexpr); */
+
 				tmp_l = lexpr;			
 				lexpr = expr_from_previous_layer(pr,lexpr, fp->layers[k]);		
 				free_expr(tmp_l);
@@ -3548,6 +3580,26 @@ void compute_sigmoid_mul_tanh_planes(bool th, double lx, double ux, double ly, d
 void mul_sigmoid_tanh_exprs(bool th, fppoly_internal_t *pr, size_t h, expr_t* res_lexpr, expr_t* res_uexpr,
 							double a_lb, double a_ub, expr_t* a_lexpr, expr_t* a_uexpr,
 							double b_lb, double b_ub, expr_t* b_lexpr, expr_t* b_uexpr) {
+  if (a_ub + a_lb < 1e-2 || b_ub + b_lb < 1e-2) {
+	/* printf("a_lb = %.20lf, a_ub = %.20lf\n",a_lb,a_ub); */
+	/* printf("b_lb = %.20lf, b_ub = %.20lf\n",b_lb,b_ub); */
+	
+	double res_lb, res_ub;
+	double fa_lb = -s(-a_lb);
+	double fa_ub = s(a_ub);
+	double fb_lb = -t(th, -b_lb);
+	double fb_ub = t(th, b_ub);
+	  
+	elina_double_interval_mul(&res_lb, &res_ub, fa_lb, fa_ub, fb_lb, fb_ub);
+	size_t i;
+	for (i = 0; i < h; ++i) {
+	  res_lexpr->inf_coeff[i] = res_uexpr->inf_coeff[i] = 0;
+	  res_lexpr->sup_coeff[i] = res_uexpr->sup_coeff[i] = 0;
+	}
+	res_lexpr->inf_cst = res_uexpr->inf_cst = res_lb;
+	res_lexpr->sup_cst = res_uexpr->sup_cst = res_ub;
+	return;
+  }
   double Al, Bl, Cl, Au, Bu, Cu;
   double delta = 1e-5;
   size_t i;
@@ -3555,8 +3607,6 @@ void mul_sigmoid_tanh_exprs(bool th, fppoly_internal_t *pr, size_t h, expr_t* re
   expr_t* tmp_uexpr;
   
   compute_sigmoid_mul_tanh_planes(th, -a_lb - delta, a_ub + delta, -b_lb - delta, b_ub + delta, &Al, &Bl, &Cl, &Au, &Bu, &Cu);
-  /* printf("%.10lf %.10lf ... %.10lf %.10lf\n",-a_lb,a_ub,-b_lb,b_ub); */
-  /* printf("lower_plane = %.10lf*x + %.10lf*y + %.10lf, upper_plane = %.10lf*x + %.10lf*y + %.10lf\n",Al,Bl,Cl,Au,Bu,Cu); */
 
   if (Al > 0) {
 	*res_lexpr = *multiply_expr(pr, a_lexpr, -Al, Al);
@@ -3659,7 +3709,8 @@ void handle_lstm_layer(elina_manager_t *man, elina_abstract0_t *abs, double **we
 			free_expr(tmp3);
 			free_expr(tmp4);
 		}
-		
+
+
 		// compute forget gate
 		expr_t *f_t_uexpr = copy_expr(f_t_lexpr);
 		expr_t *pre_f_t_lexpr = copy_expr(f_t_lexpr);
@@ -3669,6 +3720,11 @@ void handle_lstm_layer(elina_manager_t *man, elina_abstract0_t *abs, double **we
 		expr_t *tmp_f_t_uexpr = copy_expr(f_t_uexpr);
 		double pre_lb_f_t = get_lb_using_previous_layers(man, fp, tmp_f_t_lexpr, lstm_index);
 		double pre_ub_f_t = get_ub_using_previous_layers(man, fp, tmp_f_t_uexpr, lstm_index);
+		
+		/* expr_print(f_t_lexpr); */
+		/* printf("pre_lb_f_t = %.30lf\n",pre_lb_f_t); */
+		/* printf("pre_ub_f_t = %.30lf\n",pre_ub_f_t); */
+				
 		free_expr(tmp_f_t_lexpr);
 		free_expr(tmp_f_t_uexpr);
 
@@ -3840,7 +3896,7 @@ void handle_lstm_layer(elina_manager_t *man, elina_abstract0_t *abs, double **we
 		out_neurons[i]->ub = new_h_sup[i];
 		out_neurons[i]->lexpr = h_t_lexpr;
 		out_neurons[i]->uexpr = h_t_uexpr;
-
+		
 		/* expr_print(h_t_lexpr); */
 
 		free_expr(f_t_lexpr);
@@ -3852,14 +3908,14 @@ void handle_lstm_layer(elina_manager_t *man, elina_abstract0_t *abs, double **we
 	}
 	free_neuron(neuron);
 
-	/* printf("HIDDEN & CELL:\n"); */
-	for (i = 0; i < h; i++) { // DEBUG
+
+	for (i = 0; i < h; i++) { 
 	  layer->c_t_inf[i] = new_c_inf[i];
 	  layer->c_t_sup[i] = new_c_sup[i];
 	  layer->h_t_inf[i] = new_h_inf[i];
 	  layer->h_t_sup[i] = new_h_sup[i];
-	  /* printf("[%d] c_t: [%.10lf, %.10lf]\n", (int)i, new_c_inf[i], new_c_sup[i]); */
-	  /* printf("[%d] h_t: [%.10lf, %.10lf]\n", (int)i, new_h_inf[i], new_h_sup[i]); */
+	  /* printf("[%d] c_t: [%.20lf, %.20lf]\n", (int)i, new_c_inf[i], new_c_sup[i]); */
+	  /* printf("[%d] h_t: [%.20lf, %.20lf]\n", (int)i, new_h_inf[i], new_h_sup[i]); */
 	}
 	free(new_c_inf);
 	free(new_c_sup);
@@ -3868,6 +3924,7 @@ void handle_lstm_layer(elina_manager_t *man, elina_abstract0_t *abs, double **we
 	//update_state_using_previous_layers_parallel(man,fp,numlayers);
 	return;
 }
+
 
 
 
@@ -3899,7 +3956,6 @@ bool is_greater(elina_manager_t* man, elina_abstract0_t* element, elina_dim_t y,
 	  /* expr_print(sub); */
 	  
 	  double lb = get_lb_using_previous_layers(man, fp, sub, fp->numlayers);
-	  printf("is_greater: logit(%d) - logit(%d) >= %.10lf\n",y,x,-lb);
 	  
 	  free_expr(sub);
 	  
